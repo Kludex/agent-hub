@@ -28,4 +28,4 @@ jobs:
       - run: uv run python -m agent_hub.registry_validation registry
       - if: github.event_name == 'pull_request'
         run: uv run python -m agent_hub.registry_validation registry --repository . --base-ref origin/${{ github.base_ref }}
-      - run: uv run pytest tests/test_catalog_models.py tests/test_registry_index.py tests/test_registry_validation.py
+      - run: uv run pytest
