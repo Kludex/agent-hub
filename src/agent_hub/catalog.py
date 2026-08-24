@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import httpx2
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from agent_hub.catalog_models import CatalogIndex
 
@@ -14,8 +14,8 @@ BUILTIN_CATALOG_URL = "https://raw.githubusercontent.com/Kludex/agent-hub/main/r
 class CatalogSource(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    name: str
-    location: str
+    name: str = Field(pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+    location: str = Field(min_length=1)
     builtin: bool = False
 
 
@@ -42,5 +42,9 @@ def builtin_catalog_source() -> CatalogSource:
     return CatalogSource(name="agent-hub", location=BUILTIN_CATALOG_URL, builtin=True)
 
 
-def load_catalog_sources() -> tuple[CatalogSource, ...]:
-    return (builtin_catalog_source(),)
+def load_catalog_sources(data_dir: Path | None = None) -> tuple[CatalogSource, ...]:
+    if data_dir is None:
+        return (builtin_catalog_source(),)
+    from agent_hub.catalog_sources import CatalogSourceStore
+
+    return CatalogSourceStore(data_dir).load()

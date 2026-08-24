@@ -17,6 +17,7 @@ import zuvloop
 from agent_hub.app import create_app
 from agent_hub.catalog import CatalogReader, load_catalog_sources
 from agent_hub.catalog_commands import CatalogService, execute_catalog_command
+from agent_hub.catalog_sources import CatalogSourceStore, execute_catalog_source_command
 from agent_hub.config import HubConfig, load_profiles
 from agent_hub.mcp_bridge import serve_mcp
 from agent_hub.service import install, uninstall
@@ -68,7 +69,11 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
 
 async def run_catalog(config: HubConfig, arguments: tuple[str, ...], version: str | None) -> str:
     async with httpx2.AsyncClient(follow_redirects=True) as client:
-        service = CatalogService(CatalogReader(client), load_catalog_sources(), config.data_dir)
+        reader = CatalogReader(client)
+        store = CatalogSourceStore(config.data_dir)
+        if arguments[:1] == ("source",):
+            return await execute_catalog_source_command(store, reader, arguments[1:])
+        service = CatalogService(reader, load_catalog_sources(config.data_dir), config.data_dir)
         return await execute_catalog_command(service, arguments, version)
 
 

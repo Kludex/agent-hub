@@ -54,11 +54,12 @@ async def test_catalog_reader_loads_http_sources() -> None:
 @pytest.mark.anyio
 async def test_cli_catalog_uses_configured_data_directory(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     source = CatalogSource(name="local", location=str(Path("registry/index.json").resolve()))
-    monkeypatch.setattr("agent_hub.cli.load_catalog_sources", lambda: (source,))
+    monkeypatch.setattr("agent_hub.cli.load_catalog_sources", lambda _data_dir: (source,))
 
     output = await run_catalog(HubConfig(data_dir=tmp_path), ("search", "review"), None)
 
     assert output.startswith("agent-hub/reviewer 1.0.0")
+    assert "agent-hub (built-in)" in await run_catalog(HubConfig(data_dir=tmp_path), ("source", "list"), None)
 
 
 def test_agent_hub_repository_is_the_builtin_catalog_source() -> None:
