@@ -18,9 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
       - run: uv sync --locked
       - run: uv run python -m agent_hub.registry_index registry --check
-      - run: uv run pytest tests/test_catalog_models.py tests/test_registry_index.py
+      - run: uv run python -m agent_hub.registry_validation registry
+      - if: github.event_name == 'pull_request'
+        run: uv run python -m agent_hub.registry_validation registry --repository . --base-ref origin/${{ github.base_ref }}
+      - run: uv run pytest tests/test_catalog_models.py tests/test_registry_index.py tests/test_registry_validation.py

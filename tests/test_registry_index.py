@@ -41,7 +41,12 @@ def test_registry_index_contains_search_metadata_versions_and_digests(tmp_path: 
     assert [version["version"] for version in agent["versions"]] == ["1.1.0", "1.0.0"]
     assert agent["versions"][0]["bundle_path"] == "agents/agent-hub/scout/1.1.0"
     assert len(agent["versions"][0]["sha256"]) == 64
-    assert set(agent["versions"][0]["files"]) == {"README.md", "agent.toml", "instructions.md"}
+    assert set(agent["versions"][0]["files"]) == {
+        "README.md",
+        "agent.toml",
+        "evaluations/schema.toml",
+        "instructions.md",
+    }
 
 
 def test_registry_index_write_and_check(tmp_path: Path) -> None:
