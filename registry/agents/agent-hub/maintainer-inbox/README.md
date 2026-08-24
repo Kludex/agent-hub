@@ -1,6 +1,6 @@
 # Maintainer inbox
 
-Use this agent for a prioritized daily briefing across one or more GitHub repositories.
+Use this agent for a prioritized briefing across one or more GitHub repositories.
 
 It inspects pull requests, issues, CI, security alerts, and releases. It never mutates GitHub or the workspace. The Pi runtime needs shell access to run the authenticated `gh` CLI, so the profile declares shared workspace access even though its instructions prohibit writes.
 
