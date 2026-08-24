@@ -10,6 +10,8 @@ from starlette.responses import Response
 from starlette.routing import Route
 
 from agent_hub.catalog import BUILTIN_CATALOG_URL, CatalogReader, CatalogSource, load_catalog_sources
+from agent_hub.cli import run_catalog
+from agent_hub.config import HubConfig
 
 
 @pytest.mark.anyio
@@ -47,6 +49,16 @@ async def test_catalog_reader_loads_http_sources() -> None:
 
     assert index.schema_version == 1
     assert content == b"bundle"
+
+
+@pytest.mark.anyio
+async def test_cli_catalog_uses_configured_data_directory(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    source = CatalogSource(name="local", location=str(Path("registry/index.json").resolve()))
+    monkeypatch.setattr("agent_hub.cli.load_catalog_sources", lambda: (source,))
+
+    output = await run_catalog(HubConfig(data_dir=tmp_path), ("search", "review"), None)
+
+    assert output.startswith("agent-hub/reviewer 1.0.0")
 
 
 def test_agent_hub_repository_is_the_builtin_catalog_source() -> None:

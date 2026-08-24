@@ -61,22 +61,27 @@ def main(arguments: Sequence[str] | None = None) -> None:
     write_registry_index(values.registry, check=values.check)
 
 
-def _index_version(registry: Path, bundle: AgentBundle) -> dict[str, Any]:
+def calculate_bundle_digests(path: Path) -> tuple[str, dict[str, str]]:
     digests: dict[str, str] = {}
     digest = hashlib.sha256()
-    for path in sorted(item for item in bundle.path.rglob("*") if item.is_file()):
-        relative = path.relative_to(bundle.path).as_posix()
-        content = path.read_bytes()
+    for file_path in sorted(item for item in path.rglob("*") if item.is_file()):
+        relative = file_path.relative_to(path).as_posix()
+        content = file_path.read_bytes()
         digests[relative] = hashlib.sha256(content).hexdigest()
         digest.update(relative.encode())
         digest.update(b"\0")
         digest.update(content)
         digest.update(b"\0")
+    return digest.hexdigest(), digests
+
+
+def _index_version(registry: Path, bundle: AgentBundle) -> dict[str, Any]:
+    digest, files = calculate_bundle_digests(bundle.path)
     return {
         "version": bundle.manifest.version,
         "bundle_path": bundle.path.relative_to(registry).as_posix(),
-        "sha256": digest.hexdigest(),
-        "files": digests,
+        "sha256": digest,
+        "files": files,
     }
 
 

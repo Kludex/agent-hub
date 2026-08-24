@@ -4,15 +4,19 @@ import argparse
 import contextlib
 import signal
 import socket
+import sys
 from collections.abc import Generator, Sequence
 from pathlib import Path
 
 import anyio
+import httpx2
 import logfire
 import uvicorn
 import zuvloop
 
 from agent_hub.app import create_app
+from agent_hub.catalog import CatalogReader, load_catalog_sources
+from agent_hub.catalog_commands import CatalogService, execute_catalog_command
 from agent_hub.config import HubConfig, load_profiles
 from agent_hub.mcp_bridge import serve_mcp
 from agent_hub.service import install, uninstall
@@ -20,12 +24,16 @@ from agent_hub.service import install, uninstall
 
 def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - exercised in a subprocess
     parser = argparse.ArgumentParser(prog="agent-hub")
-    parser.add_argument("command", nargs="?", choices=("serve", "install", "uninstall", "mcp"), default="serve")
+    parser.add_argument(
+        "command", nargs="?", choices=("serve", "install", "uninstall", "mcp", "catalog"), default="serve"
+    )
+    parser.add_argument("operands", nargs="*")
     parser.add_argument("--data-dir", type=Path, default=Path.home() / ".agent-hub")
     parser.add_argument("--socket", type=Path)
     parser.add_argument("--global-concurrency", type=int, default=4)
     parser.add_argument("--codepuppy-executable", default="code-puppy")
     parser.add_argument("--allow-project-profiles", action="store_true")
+    parser.add_argument("--version")
     values = parser.parse_args(arguments)
     logfire.configure(send_to_logfire=False)
     config = HubConfig(
@@ -45,8 +53,23 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
         if config.socket_path is None:  # pragma: no cover - Pydantic Settings always configures the socket
             raise RuntimeError("Socket path is not configured")
         anyio.run(serve_mcp, config.socket_path, Path.cwd(), backend_options=backend_options)
+    elif values.command == "catalog":
+        output = anyio.run(
+            run_catalog,
+            config,
+            tuple(values.operands),
+            values.version,
+            backend_options=backend_options,
+        )
+        sys.stdout.write(f"{output}\n")
     else:
         anyio.run(serve, config, backend_options=backend_options)
+
+
+async def run_catalog(config: HubConfig, arguments: tuple[str, ...], version: str | None) -> str:
+    async with httpx2.AsyncClient(follow_redirects=True) as client:
+        service = CatalogService(CatalogReader(client), load_catalog_sources(), config.data_dir)
+        return await execute_catalog_command(service, arguments, version)
 
 
 class AgentHubServer(uvicorn.Server):  # pragma: no cover - exercised in a subprocess
