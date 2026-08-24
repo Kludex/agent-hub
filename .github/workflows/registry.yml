@@ -1,0 +1,26 @@
+name: Registry
+
+on:
+  pull_request:
+    paths:
+      - "registry/**"
+      - "src/agent_hub/catalog_models.py"
+      - "src/agent_hub/registry_index.py"
+  push:
+    branches: [main]
+    paths:
+      - "registry/**"
+      - "src/agent_hub/catalog_models.py"
+      - "src/agent_hub/registry_index.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run python -m agent_hub.registry_index registry --check
+      - run: uv run pytest tests/test_catalog_models.py tests/test_registry_index.py
