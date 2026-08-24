@@ -21,6 +21,7 @@ async def test_catalog_commands_browse_search_show_and_install(tmp_path: Path) -
         search = await execute_catalog_command(service, ("search", "exploration"))
         missing_search = await execute_catalog_command(service, ("search", "does-not-exist"))
         details = await execute_catalog_command(service, ("show", "agent-hub/scout"), "1.0.0")
+        spec_details = await execute_catalog_command(service, ("show", "agent-hub/pydantic-reviewer"), None)
         installed = await execute_catalog_command(service, ("install", "agent-hub/scout"), None)
 
     assert "agent-hub/task 1.0.0" in listing
@@ -29,6 +30,7 @@ async def test_catalog_commands_browse_search_show_and_install(tmp_path: Path) -
     assert "Access: read-only" in details
     assert "External dependencies: pi" in details
     assert "# Scout" in details
+    assert "AgentSpec: yes" in spec_details
     target = tmp_path / "agents" / "agent-hub" / "scout" / "1.0.0"
     assert installed.endswith(f"Installed at {target}")
     assert (target / "agent.toml").is_file()

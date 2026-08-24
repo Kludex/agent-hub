@@ -131,6 +131,7 @@ def _describe(agent: CatalogAgent, version: CatalogVersion) -> str:
     return (
         f"{agent.identity} {version.version}\n"
         f"Runtime: {agent.runtime}\n"
+        f"AgentSpec: {'yes' if agent.agent_spec else 'no'}\n"
         f"Access: {agent.access}\n"
         f"Network access: {'allowed' if agent.network_access else 'denied'}\n"
         f"Tools: {tools}\n"

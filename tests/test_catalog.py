@@ -28,7 +28,7 @@ async def test_catalog_reader_loads_local_indexes_and_bundle_files(tmp_path: Pat
         index = await reader.index(source)
         content = await reader.read(source, "agents/owner/agent/1.0.0/README.md")
 
-    assert index.agents[0].identity == "agent-hub/reviewer"
+    assert index.agents[0].identity == "agent-hub/pydantic-reviewer"
     assert content == b"# Agent\n"
 
 
@@ -58,7 +58,8 @@ async def test_cli_catalog_uses_configured_data_directory(monkeypatch: pytest.Mo
 
     output = await run_catalog(HubConfig(data_dir=tmp_path), ("search", "review"), None)
 
-    assert output.startswith("agent-hub/reviewer 1.0.0")
+    assert "agent-hub/pydantic-reviewer 1.0.0" in output
+    assert "agent-hub/reviewer 1.0.0" in output
     assert "agent-hub (built-in)" in await run_catalog(HubConfig(data_dir=tmp_path), ("source", "list"), None)
     assert await run_installed_agents(HubConfig(data_dir=tmp_path), ("list",), None, False) == "No agents installed."
 

@@ -2,6 +2,42 @@
   "agents": [
     {
       "access": "read-only",
+      "agent_spec": true,
+      "description": "A Pydantic AI AgentSpec that reviews changes without modifying the workspace.",
+      "external_dependencies": [
+        "an Anthropic API key"
+      ],
+      "keywords": [
+        "pydantic-ai",
+        "agent-spec",
+        "review",
+        "read-only"
+      ],
+      "latest_version": "1.0.0",
+      "mcp_servers": [],
+      "name": "pydantic-reviewer",
+      "network_access": false,
+      "owner": "agent-hub",
+      "runtime": "pydantic-ai",
+      "tools": [],
+      "versions": [
+        {
+          "bundle_path": "agents/agent-hub/pydantic-reviewer/1.0.0",
+          "files": {
+            "README.md": "c56a56ab8c8c99a5dd0cc4135317cc9bd20fedcaf107728da705ce00d3a0e4de",
+            "agent-spec.yaml": "caa1dbf81b71c216dff058bc87320a089951d5ea85fb8a6e0486f05122afe148",
+            "agent.toml": "749757abd8c1c20648e24a3f2f9c41cd87c76f7c72191527d53b698d3b35e758",
+            "evaluations/schema.toml": "61e7e81124ddb003c32c141112ddb3495dce696a2eac651c4b225df9df423eb4",
+            "instructions.md": "cf8a64f4ce2f713ed3d9a2d59f54437da4d501e9e044992bc7c50d5b795896b1"
+          },
+          "sha256": "5963d725afc301397c5f2107721b45b55ca58ec566820583d5310389b176f453",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "access": "read-only",
+      "agent_spec": false,
       "description": "A read-only agent that reviews changes for defects and missing tests.",
       "external_dependencies": [
         "pi"
@@ -34,6 +70,7 @@
     },
     {
       "access": "read-only",
+      "agent_spec": false,
       "description": "A read-only agent that explores a repository and reports relevant code.",
       "external_dependencies": [
         "pi"
@@ -66,6 +103,7 @@
     },
     {
       "access": "shared-write",
+      "agent_spec": false,
       "description": "A general-purpose coding agent that implements and verifies repository changes.",
       "external_dependencies": [
         "pi"

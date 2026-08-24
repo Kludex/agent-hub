@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_ai import AgentSpec
 
 from agent_hub.config import AccessMode, AgentProfile, RuntimeName, UsageLimitSettings
 
@@ -36,6 +37,7 @@ class CatalogAgent(BaseModel):
     mcp_servers: tuple[str, ...] = ()
     network_access: bool = False
     external_dependencies: tuple[str, ...] = ()
+    agent_spec: bool = False
     latest_version: str
     versions: tuple[CatalogVersion, ...]
 
@@ -71,12 +73,15 @@ class AgentManifest(BaseModel):
     mcp_servers: tuple[str, ...] = ()
     network_access: bool = False
     external_dependencies: tuple[str, ...] = ()
+    agent_spec: Literal["agent-spec.yaml", "agent-spec.yml", "agent-spec.json"] | None = None
     usage_limits: UsageLimitSettings = Field(default_factory=UsageLimitSettings)
     allow_delegation: bool = False
 
     @model_validator(mode="after")
     def validate_profile(self) -> Self:
         self.to_profile("")
+        if self.agent_spec is not None and self.runtime != "pydantic-ai":
+            raise ValueError("agent_spec requires runtime = 'pydantic-ai'")
         return self
 
     @property
@@ -108,6 +113,7 @@ class AgentBundle:
     manifest: AgentManifest
     instructions: str
     readme: str
+    agent_spec: AgentSpec | None
 
 
 def load_bundle(path: Path) -> AgentBundle:
@@ -116,11 +122,14 @@ def load_bundle(path: Path) -> AgentBundle:
     missing = required - files
     if missing:
         raise CatalogValidationError(f"Bundle is missing required files: {', '.join(sorted(missing))}")
-    unexpected = {name for name in files - required if not _is_evaluation(name)}
+    manifest = AgentManifest.model_validate(tomllib.loads((path / "agent.toml").read_text(encoding="utf-8")))
+    allowed = required | ({manifest.agent_spec} if manifest.agent_spec is not None else set())
+    unexpected = {name for name in files - allowed if not _is_evaluation(name)}
     if unexpected:
         raise CatalogValidationError(f"Bundle contains unexpected files: {', '.join(sorted(unexpected))}")
+    if manifest.agent_spec is not None and manifest.agent_spec not in files:
+        raise CatalogValidationError(f"Bundle is missing AgentSpec file: {manifest.agent_spec}")
 
-    manifest = AgentManifest.model_validate(tomllib.loads((path / "agent.toml").read_text(encoding="utf-8")))
     expected = (manifest.owner, manifest.name, manifest.version)
     actual = (path.parent.parent.name, path.parent.name, path.name)
     if actual != expected:
@@ -129,7 +138,18 @@ def load_bundle(path: Path) -> AgentBundle:
     readme = (path / "README.md").read_text(encoding="utf-8")
     if not instructions.strip() or not readme.strip():
         raise CatalogValidationError("Bundle instructions and README must not be empty")
-    return AgentBundle(path=path, manifest=manifest, instructions=instructions, readme=readme)
+    agent_spec = AgentSpec.from_file(path / manifest.agent_spec) if manifest.agent_spec is not None else None
+    if agent_spec is not None and agent_spec.capabilities:
+        raise CatalogValidationError(
+            "Catalog AgentSpec capabilities are not supported; declare tools and MCP servers in agent.toml"
+        )
+    return AgentBundle(
+        path=path,
+        manifest=manifest,
+        instructions=instructions,
+        readme=readme,
+        agent_spec=agent_spec,
+    )
 
 
 def _is_evaluation(name: str) -> bool:

@@ -13,11 +13,14 @@ def test_curated_registry_bundles_follow_the_catalog_schema() -> None:
     bundles = [load_bundle(path) for path in paths]
 
     assert [bundle.manifest.identity for bundle in bundles] == [
+        "agent-hub/pydantic-reviewer",
         "agent-hub/reviewer",
         "agent-hub/scout",
         "agent-hub/task",
     ]
     assert bundles[0].manifest.to_profile(bundles[0].instructions).instructions == bundles[0].instructions
+    assert bundles[0].agent_spec is not None
+    assert bundles[0].agent_spec.name == "pydantic-reviewer"
 
 
 def test_bundle_allows_evaluation_files(tmp_path: Path) -> None:
@@ -62,6 +65,60 @@ def test_bundle_rejects_invalid_layout(change: str, message: str, tmp_path: Path
 
     with pytest.raises(CatalogValidationError, match=message):
         load_bundle(path)
+
+
+@pytest.mark.parametrize(
+    ("filename", "content"), [("agent-spec.yaml", "model: test\n"), ("agent-spec.json", '{"model":"test"}')]
+)
+def test_bundle_loads_pydantic_ai_agent_specs(filename: str, content: str, tmp_path: Path) -> None:
+    path = _write_bundle(tmp_path)
+    manifest = (path / "agent.toml").read_text(encoding="utf-8")
+    (path / "agent.toml").write_text(
+        f'{manifest}runtime = "pydantic-ai"\nagent_spec = "{filename}"\n', encoding="utf-8"
+    )
+    (path / filename).write_text(content, encoding="utf-8")
+
+    bundle = load_bundle(path)
+
+    assert bundle.agent_spec is not None
+    assert bundle.agent_spec.model == "test"
+
+
+def test_bundle_requires_its_declared_agent_spec(tmp_path: Path) -> None:
+    path = _write_bundle(tmp_path)
+    manifest = (path / "agent.toml").read_text(encoding="utf-8")
+    (path / "agent.toml").write_text(
+        f'{manifest}runtime = "pydantic-ai"\nagent_spec = "agent-spec.yaml"\n', encoding="utf-8"
+    )
+
+    with pytest.raises(CatalogValidationError, match="missing AgentSpec"):
+        load_bundle(path)
+
+
+def test_catalog_agent_specs_cannot_bypass_managed_capabilities(tmp_path: Path) -> None:
+    path = _write_bundle(tmp_path)
+    manifest = (path / "agent.toml").read_text(encoding="utf-8")
+    (path / "agent.toml").write_text(
+        f'{manifest}runtime = "pydantic-ai"\nagent_spec = "agent-spec.yaml"\n', encoding="utf-8"
+    )
+    (path / "agent-spec.yaml").write_text("model: test\ncapabilities: [Thinking]\n", encoding="utf-8")
+
+    with pytest.raises(CatalogValidationError, match="capabilities are not supported"):
+        load_bundle(path)
+
+
+def test_agent_spec_requires_the_pydantic_ai_runtime() -> None:
+    with pytest.raises(ValueError, match="agent_spec requires"):
+        AgentManifest.model_validate(
+            {
+                "schema_version": 1,
+                "owner": "owner",
+                "name": "agent",
+                "version": "1.0.0",
+                "description": "Description",
+                "agent_spec": "agent-spec.yaml",
+            }
+        )
 
 
 def test_manifest_uses_profile_lifetime_validation() -> None:
