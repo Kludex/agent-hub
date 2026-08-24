@@ -3,15 +3,21 @@ name: Registry
 on:
   pull_request:
     paths:
+      - ".github/workflows/registry.yml"
+      - "pyproject.toml"
       - "registry/**"
-      - "src/agent_hub/catalog_models.py"
-      - "src/agent_hub/registry_index.py"
+      - "src/**"
+      - "tests/**"
+      - "uv.lock"
   push:
     branches: [main]
     paths:
+      - ".github/workflows/registry.yml"
+      - "pyproject.toml"
       - "registry/**"
-      - "src/agent_hub/catalog_models.py"
-      - "src/agent_hub/registry_index.py"
+      - "src/**"
+      - "tests/**"
+      - "uv.lock"
 
 jobs:
   validate:

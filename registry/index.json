@@ -67,12 +67,12 @@
         {
           "bundle_path": "agents/agent-hub/maintainer-inbox",
           "files": {
-            "README.md": "6ed95f9a6f0be06f7c8b52074291fe003bb49953f7ff5a278c0a8d7c9868f119",
+            "README.md": "46d04b0b24e921052d5877e10421b63e4d954288fd3b6c2b8d9563d16a86c854",
             "agent.toml": "18f8d34ebca670ca83eba9cb5272b52fb4bc74f8725e552c182aa873b274b216",
             "evaluations/role-contract.toml": "bc9f20bea910799ac75a1e6a08fbb542b8db3e4657ee30d0df95950646634e22",
             "instructions.md": "1584b6bd682bf09c486804b7660ba84b69a1d46258b8886da273c6e9ea7b7d78"
           },
-          "sha256": "0c91afb162dc802390894208ee665ab3ba004d55a376e2bade68426c1385d9b0",
+          "sha256": "025bdfcafcb4d2a5fb3b06f1f31619a3ee8debfe9f893e4412704801498f766f",
           "version": "1.0.0"
         }
       ]
