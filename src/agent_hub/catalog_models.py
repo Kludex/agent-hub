@@ -14,6 +14,42 @@ class CatalogValidationError(ValueError):
     """Raised when an agent catalog bundle is invalid."""
 
 
+class CatalogVersion(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    version: str = Field(pattern=r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+    bundle_path: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    files: dict[str, str]
+
+
+class CatalogAgent(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    owner: str
+    name: str
+    description: str
+    keywords: tuple[str, ...] = ()
+    runtime: RuntimeName
+    access: AccessMode
+    tools: tuple[str, ...] = ()
+    mcp_servers: tuple[str, ...] = ()
+    external_dependencies: tuple[str, ...] = ()
+    latest_version: str
+    versions: tuple[CatalogVersion, ...]
+
+    @property
+    def identity(self) -> str:
+        return f"{self.owner}/{self.name}"
+
+
+class CatalogIndex(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    schema_version: Literal[1]
+    agents: tuple[CatalogAgent, ...]
+
+
 class AgentManifest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
