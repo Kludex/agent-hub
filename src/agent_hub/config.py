@@ -115,7 +115,7 @@ def bundled_profiles() -> dict[str, AgentProfile]:
 
 
 def load_profiles(config: HubConfig, cwd: Path | None = None) -> dict[str, AgentProfile]:
-    profiles = {**config.profiles}
+    profiles = {**config.profiles, **load_installed_profiles(config.data_dir)}
     directories = [Path.home() / ".config" / "agent-hub" / "agents"]
     if cwd is not None and config.allow_project_profiles:
         directories.append(cwd / ".agent-hub" / "agents")
@@ -124,6 +124,18 @@ def load_profiles(config: HubConfig, cwd: Path | None = None) -> dict[str, Agent
             continue
         for path in sorted(directory.glob("*.toml")):
             profile = parse_profile(path)
+            profiles[profile.name] = profile
+    return profiles
+
+
+def load_installed_profiles(data_dir: Path) -> dict[str, AgentProfile]:
+    from agent_hub.catalog_models import load_bundle
+
+    profiles: dict[str, AgentProfile] = {}
+    for path in sorted((data_dir / "agents").glob("*/*/*")):
+        if path.is_dir():
+            bundle = load_bundle(path)
+            profile = bundle.manifest.to_profile(bundle.instructions)
             profiles[profile.name] = profile
     return profiles
 

@@ -19,6 +19,44 @@ def test_hub_config_loads_environment_with_pydantic_settings(monkeypatch: pytest
     assert set(config.profiles) == {"task", "scout", "reviewer"}
 
 
+def test_installed_profiles_load_before_user_and_opted_in_project_overrides(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", lambda: home)
+    bundle = tmp_path / "data" / "agents" / "owner" / "catalog-agent" / "1.0.0"
+    bundle.mkdir(parents=True)
+    (bundle / "agent.toml").write_text(
+        'schema_version = 1\nowner = "owner"\nname = "catalog-agent"\nversion = "1.0.0"\n'
+        'description = "Installed agent"\nruntime = "pydantic-ai"\naccess = "read-only"\n',
+        encoding="utf-8",
+    )
+    (bundle / "instructions.md").write_text("Installed instructions.\n", encoding="utf-8")
+    (bundle / "README.md").write_text("# Installed agent\n", encoding="utf-8")
+    config = HubConfig(data_dir=tmp_path / "data", profiles={"task": AgentProfile(name="task")})
+
+    installed = load_profiles(config)
+
+    assert installed["owner/catalog-agent"].runtime == "pydantic-ai"
+    assert installed["owner/catalog-agent"].instructions == "Installed instructions.\n"
+
+    user_directory = home / ".config" / "agent-hub" / "agents"
+    user_directory.mkdir(parents=True)
+    (user_directory / "override.toml").write_text(
+        'name = "owner/catalog-agent"\nruntime = "codepuppy"\naccess = "read-only"\n', encoding="utf-8"
+    )
+    project = tmp_path / "project"
+    project_directory = project / ".agent-hub" / "agents"
+    project_directory.mkdir(parents=True)
+    (project_directory / "override.toml").write_text(
+        'name = "owner/catalog-agent"\nruntime = "pi"\naccess = "read-only"\n', encoding="utf-8"
+    )
+
+    assert load_profiles(config, project)["owner/catalog-agent"].runtime == "codepuppy"
+    enabled = config.model_copy(update={"allow_project_profiles": True})
+    assert load_profiles(enabled, project)["owner/catalog-agent"].runtime == "pi"
+
+
 def test_project_profile_requires_opt_in_and_overrides_user_profiles(tmp_path: Path) -> None:
     project = tmp_path / "project"
     profile_directory = project / ".agent-hub" / "agents"
