@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import anyio
 
@@ -99,9 +99,10 @@ class IsolationManager:
 
     @staticmethod
     def _from_agent(agent: AgentRecord) -> Worktree:
-        raw = agent.restoration.get("isolation")
-        if not isinstance(raw, dict) or raw.get("kind") != "git-worktree":
+        raw_value: object = agent.restoration.get("isolation")
+        if not isinstance(raw_value, dict) or cast(dict[str, Any], raw_value).get("kind") != "git-worktree":
             raise IsolationFailure(f"Agent {agent.id} has no isolation worktree")
+        raw = cast(dict[str, Any], raw_value)
         try:
             source_root = Path(str(raw["sourceRoot"]))
             path = Path(str(raw["worktreePath"]))
@@ -113,9 +114,10 @@ class IsolationManager:
 
     @staticmethod
     def _optional_patch_path(agent: AgentRecord) -> Path | None:
-        raw = agent.restoration.get("isolation")
-        if not isinstance(raw, dict) or not isinstance(raw.get("patchPath"), str):
+        raw_value: object = agent.restoration.get("isolation")
+        if not isinstance(raw_value, dict) or not isinstance(cast(dict[str, Any], raw_value).get("patchPath"), str):
             return None
+        raw = cast(dict[str, Any], raw_value)
         return Path(raw["patchPath"])
 
     @classmethod

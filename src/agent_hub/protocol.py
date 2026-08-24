@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, cast
 
 from typing_extensions import TypedDict
 
@@ -39,7 +39,7 @@ def decode_records(body: bytes, max_record_bytes: int) -> list[RPCRequest]:
         if len(raw) > max_record_bytes:
             raise RPCError(-32600, "JSONL record exceeds the configured limit")
         try:
-            value = json.loads(raw.decode("utf-8"))
+            value: object = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise RPCError(-32700, "Parse error") from exc
         records.append(validate_request(value))
@@ -48,18 +48,21 @@ def decode_records(body: bytes, max_record_bytes: int) -> list[RPCRequest]:
     return records
 
 
-def validate_request(value: Any) -> RPCRequest:
+def validate_request(value: object) -> RPCRequest:
     if not isinstance(value, dict):
         raise RPCError(-32600, "Request must be an object")
-    if value.get("jsonrpc") != JSONRPC_VERSION or not isinstance(value.get("method"), str):
+    request = cast(dict[str, Any], value)
+    method: object = request.get("method")
+    if request.get("jsonrpc") != JSONRPC_VERSION or not isinstance(method, str):
         raise RPCError(-32600, "Invalid JSON-RPC request")
-    request_id = value.get("id")
+    request_id: object = request.get("id")
     if request_id is not None and not isinstance(request_id, (str, int)):
         raise RPCError(-32600, "Request id must be a string, integer, or null")
-    params = value.get("params", {})
-    if not isinstance(params, dict):
+    params_value: object = request.get("params", {})
+    if not isinstance(params_value, dict):
         raise RPCError(-32602, "Params must be an object")
-    return {"jsonrpc": JSONRPC_VERSION, "id": request_id, "method": value["method"], "params": params}
+    params = cast(dict[str, Any], params_value)
+    return {"jsonrpc": JSONRPC_VERSION, "id": request_id, "method": method, "params": params}
 
 
 def success(request_id: str | int | None, result: Any) -> dict[str, Any]:
@@ -81,12 +84,14 @@ def encode_record(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
 
 
-def to_wire(value: Any) -> Any:
+def to_wire(value: object) -> Any:
     if isinstance(value, dict):
+        mapping = cast(dict[object, object], value)
         return {
             _CAMEL_BOUNDARY.sub(lambda match: match.group(1).upper(), str(key)): to_wire(item)
-            for key, item in value.items()
+            for key, item in mapping.items()
         }
     if isinstance(value, (list, tuple)):
-        return [to_wire(item) for item in value]
+        items = cast(list[object] | tuple[object, ...], value)
+        return [to_wire(item) for item in items]
     return value

@@ -141,12 +141,14 @@ async def test_run_wait_without_timeout_settles(hub: RunningHub, tmp_path: Path)
     async def wait() -> None:
         await send.send(await hub.rpc("run.wait", {"runId": spawned["runId"]}))
 
+    result: dict[str, Any] | None = None
     async with anyio.create_task_group() as task_group:
         task_group.start_soon(wait)
         await anyio.sleep(0.01)
         hub.runtime.release()
         result = await receive.receive()
 
+    assert result is not None
     assert result["run"]["state"] == "succeeded"
     await send.aclose()
     await receive.aclose()

@@ -137,7 +137,9 @@ def load_bundle(path: Path) -> AgentBundle:
     if missing:
         raise CatalogValidationError(f"Bundle is missing required files: {', '.join(sorted(missing))}")
     manifest = AgentManifest.model_validate(tomllib.loads((path / "agent.toml").read_text(encoding="utf-8")))
-    allowed = required | ({manifest.agent_spec} if manifest.agent_spec is not None else set())
+    allowed = set(required)
+    if manifest.agent_spec is not None:
+        allowed.add(manifest.agent_spec)
     unexpected = {name for name in files - allowed if not _is_evaluation(name)}
     if unexpected:
         raise CatalogValidationError(f"Bundle contains unexpected files: {', '.join(sorted(unexpected))}")

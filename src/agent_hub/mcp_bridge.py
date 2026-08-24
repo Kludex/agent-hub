@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import anyio
 from mcp.server.mcpserver import Context, MCPServer
@@ -75,9 +75,10 @@ class MCPBridge:
                         },
                     )
             raise
-        run = waited["run"]
-        if not isinstance(run, dict):
+        run_value: object = waited.get("run")
+        if not isinstance(run_value, dict):
             raise HubClientError("Agent Hub returned an invalid run")
+        run = cast(dict[str, Any], run_value)
         await ctx.report_progress(1, 1, f"Agent Hub run {run_id} {run.get('state', 'completed')}")
         if run.get("state") != "succeeded":
             raise HubClientError(str(run.get("error") or f"Delegated run {run.get('state', 'failed')}"))
@@ -140,7 +141,7 @@ def create_mcp_server(socket_path: Path, cwd: Path | None = None) -> MCPServer[N
     bridge = MCPBridge(client, cwd or Path.cwd())
 
     @asynccontextmanager
-    async def lifespan(_: MCPServer[None]) -> AsyncIterator[None]:  # pragma: no cover - verified over stdio
+    async def lifespan(_: MCPServer[None]) -> AsyncGenerator[None]:  # pragma: no cover - verified over stdio
         async with client:
             await client.health()
             yield

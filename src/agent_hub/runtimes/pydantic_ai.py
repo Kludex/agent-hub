@@ -35,11 +35,11 @@ class PydanticAIHandle:
     agent: Agent[Any, Any]
     event_send: MemoryObjectSendStream[RuntimeEvent]
     event_receive: MemoryObjectReceiveStream[RuntimeEvent]
-    messages: list[Any] = field(default_factory=list)
+    messages: list[Any] = field(default_factory=list[Any])
     usage_limits: UsageLimits = field(default_factory=UsageLimits)
     current_scope: anyio.CancelScope | None = None
-    steering: list[str] = field(default_factory=list)
-    follow_ups: list[str] = field(default_factory=list)
+    steering: list[str] = field(default_factory=list[str])
+    follow_ups: list[str] = field(default_factory=list[str])
 
 
 class PydanticAIRuntime:
@@ -127,6 +127,7 @@ class PydanticAIRuntime:
             prompt = prompts.pop(0)
             scope = anyio.CancelScope()
             runtime.current_scope = scope
+            result = None
             try:
                 with scope:
                     result = await runtime.agent.run(
@@ -141,6 +142,7 @@ class PydanticAIRuntime:
                 raise RuntimeFailure(str(exc)) from exc
             finally:
                 runtime.current_scope = None
+            assert result is not None
             outputs.append(str(result.output))
             runtime.messages = list(result.all_messages())
             total_usage.incr(result.usage)
