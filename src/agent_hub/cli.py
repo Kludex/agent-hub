@@ -22,6 +22,7 @@ from agent_hub.config import HubConfig, load_profiles
 from agent_hub.installed_agents import InstalledAgentService, execute_installed_agent_command
 from agent_hub.mcp_bridge import serve_mcp
 from agent_hub.service import install, uninstall
+from agent_hub.update import DEFAULT_UPDATE_SOURCE, update
 
 
 def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - exercised in a subprocess
@@ -29,7 +30,7 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("serve", "install", "uninstall", "mcp", "catalog", "agent"),
+        choices=("serve", "install", "update", "uninstall", "mcp", "catalog", "agent"),
         default="serve",
     )
     parser.add_argument("operands", nargs="*")
@@ -40,6 +41,8 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     parser.add_argument("--allow-project-profiles", action="store_true")
     parser.add_argument("--version")
     parser.add_argument("--yes", action="store_true")
+    parser.add_argument("--source", default=DEFAULT_UPDATE_SOURCE)
+    parser.add_argument("--health-timeout", type=float, default=15)
     values = parser.parse_args(arguments)
     logfire.configure(send_to_logfire=False)
     config = HubConfig(
@@ -53,6 +56,16 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     backend_options = {"loop_factory": zuvloop.new_event_loop}
     if values.command == "install":
         anyio.run(install, config, backend_options=backend_options)
+    elif values.command == "update":
+        result = anyio.run(
+            update,
+            config,
+            values.source,
+            values.health_timeout,
+            backend_options=backend_options,
+        )
+        backup = f" Database backup: {result.database_backup}." if result.database_backup is not None else ""
+        sys.stdout.write(f"Agent Hub updated successfully.{backup}\n")
     elif values.command == "uninstall":
         anyio.run(uninstall, backend_options=backend_options)
     elif values.command == "mcp":

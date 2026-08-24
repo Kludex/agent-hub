@@ -6,8 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from agent_hub.assets import SKILL_NAMES
 from agent_hub.config import HubConfig
-from agent_hub.service import SKILL_NAMES, install, uninstall
+from agent_hub.service import install, service_path, start_service, stop_service, uninstall
 
 
 @pytest.mark.anyio
@@ -59,6 +60,10 @@ async def test_installs_and_removes_the_extension_and_user_service(
         assert "'\\''" in contents
         assert "/opt/codepuppy/bin/code-puppy" in contents
 
+    assert service_path() == service
+    await stop_service()
+    await start_service()
+    await stop_service(check=False)
     await uninstall()
 
     assert not extension.exists()
@@ -96,3 +101,9 @@ async def test_rejects_service_management_on_unsupported_platform(
         await install(config)
     with pytest.raises(RuntimeError, match="unsupported"):
         await uninstall()
+    with pytest.raises(RuntimeError, match="unsupported"):
+        await stop_service()
+    with pytest.raises(RuntimeError, match="unsupported"):
+        await start_service()
+    with pytest.raises(RuntimeError, match="unsupported"):
+        service_path()
