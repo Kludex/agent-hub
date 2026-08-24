@@ -4,15 +4,15 @@
 
 ## Agent catalog
 
-- [ ] Add a curated agent registry under `registry/` in the Agent Hub repository. Store immutable, versioned bundles under `registry/agents/<owner>/<name>/<version>/` with `agent.toml`, `instructions.md`, `README.md`, and optional evaluations.
-- [ ] Generate `registry/index.json` from the bundles in CI. Include searchable metadata, available versions, bundle paths, runtime and access requirements, and SHA-256 digests. Keep bundle files as the source of truth.
-- [ ] Require maintainer review and passing schema, security, and evaluation checks before merging an agent. Reject modifications to an existing version and require changes to use a new version.
-- [ ] Add the Agent Hub repository as the built-in catalog source so `agent-hub catalog` works without configuration.
-- [ ] Add `agent-hub catalog`, `catalog search`, `catalog show`, and `catalog install` commands. Installing an agent must verify its digest, display its permissions and external dependencies, and never import credentials or session history.
-- [ ] Add `agent-hub catalog source add`, `source list`, and `source remove` commands for additional compatible registries. Identify agents by `<owner>/<name>` so sources cannot silently shadow one another.
-- [ ] Add `agent-hub agent list`, `agent update`, and `agent remove` commands for locally installed agents. Pin installed versions and require confirmation when an update expands tools, write access, network access, or MCP dependencies.
-- [ ] Extend profile loading to support installed bundles while preserving local user overrides and project-profile opt-in.
-- [ ] Document how to create, validate, and publish a registry, and how users configure sources, browse the catalog, install agents, update them, and inspect their permissions.
+- [x] Add a curated agent registry under `registry/` in the Agent Hub repository. Store immutable, versioned bundles under `registry/agents/<owner>/<name>/<version>/` with `agent.toml`, `instructions.md`, `README.md`, and optional evaluations.
+- [x] Generate `registry/index.json` from the bundles in CI. Include searchable metadata, available versions, bundle paths, runtime and access requirements, and SHA-256 digests. Keep bundle files as the source of truth.
+- [x] Require maintainer review and passing schema, security, and evaluation checks before merging an agent. Reject modifications to an existing version and require changes to use a new version.
+- [x] Add the Agent Hub repository as the built-in catalog source so `agent-hub catalog` works without configuration.
+- [x] Add `agent-hub catalog`, `catalog search`, `catalog show`, and `catalog install` commands. Installing an agent must verify its digest, display its permissions and external dependencies, and never import credentials or session history.
+- [x] Add `agent-hub catalog source add`, `source list`, and `source remove` commands for additional compatible registries. Identify agents by `<owner>/<name>` so sources cannot silently shadow one another.
+- [x] Add `agent-hub agent list`, `agent update`, and `agent remove` commands for locally installed agents. Pin installed versions and require confirmation when an update expands tools, write access, network access, or MCP dependencies.
+- [x] Extend profile loading to support installed bundles while preserving local user overrides and project-profile opt-in.
+- [x] Document how to create, validate, and publish a registry, and how users configure sources, browse the catalog, install agents, update them, and inspect their permissions.
 
 ## CodePuppy runtime
 

@@ -112,6 +112,20 @@ uv run agent-hub
 
 The service listens on `~/.agent-hub/run/agent-hub.sock`. It runs Uvicorn with `zttp` for HTTP parsing and `zuvloop` for the event loop. Python clients and tests use `httpx2`.
 
+## Agent catalog
+
+Browse and install curated profiles from the built-in Agent Hub registry:
+
+```bash
+agent-hub catalog
+agent-hub catalog search review
+agent-hub catalog show agent-hub/reviewer
+agent-hub catalog install agent-hub/reviewer
+agent-hub agent list
+```
+
+Agent Hub verifies the bundle and displays its permissions and external dependencies before installation. Installed versions stay pinned until you run `agent-hub agent update <owner>/<name>`. See [Agent catalog](docs/catalog.md) for source management, permission-aware updates, and registry publishing.
+
 ## Profiles
 
 Create user profiles under `~/.config/agent-hub/agents/`:
@@ -131,7 +145,7 @@ Project profiles under `.agent-hub/agents/` require an explicit opt-in:
 uv run agent-hub install --allow-project-profiles
 ```
 
-Project profiles override user profiles with the same name. Keep-alive profiles must set a bounded `idle_timeout_seconds`.
+Project profiles override user profiles with the same name. User and opted-in project profiles also override installed catalog profiles identified by `<owner>/<name>`. Keep-alive profiles must set a bounded `idle_timeout_seconds`.
 
 A Pydantic AI profile can select manager-owned workspace tools and named MCP servers:
 
