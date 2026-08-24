@@ -1,0 +1,27 @@
+{
+  "name": "@agent-hub/pi-extension",
+  "version": "0.1.0",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "dependencies": {
+    "typebox": "^1.0.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.2",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "oxfmt": "^0.32.0",
+    "oxlint": "^1.50.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "bundle": "esbuild src/index.ts --bundle --format=esm --platform=node --outfile=../src/agent_hub/assets/agent-hub.js",
+    "check": "tsc --noEmit && oxlint src tests && oxfmt --check src tests",
+    "format": "oxfmt --write src tests",
+    "test": "node --import tsx --test tests/*.test.ts"
+  }
+}

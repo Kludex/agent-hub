@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-hub"
+version = "0.1.0"
+description = "A local control plane for coding agents"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiosqlite>=0.21",
+    "anyio>=4.8",
+    "httpx2>=2.12",
+    "logfire>=3.0",
+    "mcp>=2.0",
+    "pydantic-ai-slim>=1.0",
+    "pydantic-settings>=2.8",
+    "starlette>=0.45",
+    "typing-extensions>=4.12",
+    "uvicorn>=0.34",
+    "zttp>=0.0.24",
+    "zuvloop>=0.0.8",
+]
+
+[project.scripts]
+agent-hub = "agent_hub.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+]
+
+[tool.logfire]
+ignore_no_config = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_hub"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "FA", "UP", "RUF100"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=agent_hub --cov=tests --cov-report=term-missing --cov-fail-under=100"
+filterwarnings = ["error"]
+markers = ["installed_pi: requires a locally installed Pi executable but does not contact a provider"]
+xfail_strict = true
+
+[tool.coverage.run]
+disable_warnings = ["module-not-measured"]
+source_pkgs = ["agent_hub", "tests"]
+
+[tool.coverage.report]
+fail_under = 100
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
