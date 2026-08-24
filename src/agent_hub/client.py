@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import uuid
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import httpx2
+from pydantic import ValidationError
+
+from agent_hub.json_data import JSONValue, parse_json
 
 
 class HubClientError(RuntimeError):
@@ -33,7 +36,7 @@ class HubClient:
         if response.json() != {"status": "ok"}:
             raise HubClientError("Agent Hub returned an invalid health response")
 
-    async def rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, JSONValue]:
         request_id = uuid.uuid4().hex
         body = (
             json.dumps(
@@ -48,14 +51,16 @@ class HubClient:
             content=body,
             headers={"content-type": "application/x-ndjson"},
         )
+        records: list[dict[str, JSONValue]] = []
         try:
-            records = [json.loads(line) for line in response.content.splitlines() if line]
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            for line in response.content.splitlines():
+                if line:
+                    value = parse_json(line)
+                    if isinstance(value, dict):
+                        records.append(value)
+        except ValidationError as exc:
             raise HubClientError("Agent Hub returned an invalid JSON-RPC response") from exc
-        record = next(
-            (value for value in records if isinstance(value, dict) and value.get("id") == request_id),
-            None,
-        )
+        record = next((value for value in records if value.get("id") == request_id), None)
         if record is None:
             raise HubClientError("Agent Hub returned no matching JSON-RPC response")
         error = record.get("error")
@@ -66,7 +71,7 @@ class HubClient:
         result = record.get("result")
         if not isinstance(result, dict):
             raise HubClientError("Agent Hub returned an invalid JSON-RPC result")
-        return cast(dict[str, Any], result)
+        return result
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx2.Response:
         if self._client is None:

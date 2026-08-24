@@ -146,8 +146,8 @@ async def test_run_wait_without_timeout_settles(hub: RunningHub, tmp_path: Path)
         await anyio.sleep(0.01)
         hub.runtime.release()
         result = await receive.receive()
+        assert result["run"]["state"] == "succeeded"
 
-    assert result["run"]["state"] == "succeeded"
     await send.aclose()
     await receive.aclose()
 

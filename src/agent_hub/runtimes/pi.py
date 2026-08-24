@@ -6,13 +6,15 @@ import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import anyio
 import logfire
 from anyio.abc import Process, TaskGroup
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+from pydantic import ValidationError
 
+from agent_hub.json_data import JSONValue, parse_json
 from agent_hub.models import AgentRecord
 from agent_hub.runtimes.base import RuntimeEvent, RuntimeFailure, RuntimeResult, StartAgentRequest, StartRunRequest
 
@@ -20,7 +22,7 @@ from agent_hub.runtimes.base import RuntimeEvent, RuntimeFailure, RuntimeResult,
 @dataclass
 class CommandWaiter:
     ready: anyio.Event = field(default_factory=anyio.Event)
-    value: dict[str, Any] | None = None
+    value: dict[str, JSONValue] | None = None
     error: RuntimeFailure | None = None
 
 
@@ -30,7 +32,7 @@ class PiHandle:
     process: Process
     event_send: MemoryObjectSendStream[RuntimeEvent]
     event_receive: MemoryObjectReceiveStream[RuntimeEvent]
-    responses: dict[str, CommandWaiter] = field(default_factory=dict)
+    responses: dict[str, CommandWaiter] = field(default_factory=dict[str, CommandWaiter])
     settled: anyio.Event = field(default_factory=anyio.Event)
     write_lock: anyio.Lock = field(default_factory=anyio.Lock)
     protocol_error: str | None = None
@@ -122,7 +124,7 @@ class PiRuntime:
         if not winner or winner[0] == "exited" or pi.protocol_error is not None:
             reason = pi.protocol_error or f"Pi exited with status {pi.process.returncode}"
             raise RuntimeFailure(reason)
-        responses: dict[str, dict[str, Any]] = {}
+        responses: dict[str, dict[str, JSONValue]] = {}
 
         async def collect(key: str, command: str) -> None:
             responses[key] = await self._command(pi, command)
@@ -131,7 +133,8 @@ class PiRuntime:
             task_group.start_soon(collect, "text", "get_last_assistant_text")
             task_group.start_soon(collect, "stats", "get_session_stats")
             task_group.start_soon(collect, "state", "get_state")
-        text = cast(str | None, responses["text"].get("text")) or ""
+        text_value = responses["text"].get("text")
+        text = text_value if isinstance(text_value, str) else ""
         state = responses["state"]
         restoration = {"sessionFile": state.get("sessionFile"), "sessionId": state.get("sessionId")}
         return RuntimeResult(text=text, usage=responses["stats"], restoration=restoration)
@@ -193,7 +196,7 @@ class PiRuntime:
             raise RuntimeFailure("Pi session restoration was cancelled")
         return handle
 
-    async def _command(self, handle: PiHandle, command: str, **values: Any) -> dict[str, Any]:
+    async def _command(self, handle: PiHandle, command: str, **values: Any) -> dict[str, JSONValue]:
         if handle.process.returncode is not None or handle.process.stdin is None:
             raise RuntimeFailure("Pi process is not running")
         handle.command_number += 1
@@ -220,7 +223,7 @@ class PiRuntime:
         if not response.get("success", False):
             raise RuntimeFailure(str(response.get("error", f"Pi command {command!r} failed")))
         data = response.get("data")
-        return cast(dict[str, Any], data) if isinstance(data, dict) else {}
+        return data if isinstance(data, dict) else {}
 
     async def _read_stdout(self, handle: PiHandle) -> None:
         stream = handle.process.stdout
@@ -253,23 +256,23 @@ class PiRuntime:
 
     async def _receive(self, handle: PiHandle, raw: bytes) -> None:
         try:
-            value = json.loads(raw.decode("utf-8"))
-        except UnicodeDecodeError, json.JSONDecodeError:
+            record = parse_json(raw)
+        except ValidationError:
             await self._protocol_failure(handle, "Pi emitted malformed JSON")
             return
-        if not isinstance(value, dict):
+        if not isinstance(record, dict):
             await self._protocol_failure(handle, "Pi emitted a non-object record")
             return
-        command_id = value.get("id")
-        if value.get("type") == "response" and isinstance(command_id, str):
+        command_id = record.get("id")
+        if record.get("type") == "response" and isinstance(command_id, str):
             waiter = handle.responses.get(command_id)
             if waiter is not None and not waiter.ready.is_set():
-                waiter.value = value
+                waiter.value = record
                 waiter.ready.set()
             return
-        if value.get("type") == "agent_settled":
+        if record.get("type") == "agent_settled":
             handle.settled.set()
-        for event in self._normalize(value):
+        for event in self._normalize(record):
             await handle.event_send.send(event)
 
     async def _protocol_failure(self, handle: PiHandle, message: str) -> None:
@@ -316,17 +319,18 @@ class PiRuntime:
         await handle.event_receive.aclose()
 
     @staticmethod
-    def _normalize(value: dict[str, Any]) -> list[RuntimeEvent]:
+    def _normalize(value: dict[str, JSONValue]) -> list[RuntimeEvent]:
         event_type = value.get("type")
         if event_type == "message_update":
             events: list[RuntimeEvent] = []
-            delta = value.get("assistantMessageEvent", {})
-            if delta.get("type") == "text_delta":
+            delta = value.get("assistantMessageEvent")
+            if isinstance(delta, dict) and delta.get("type") == "text_delta":
                 events.append(RuntimeEvent("run.output.delta", {"text": delta.get("delta", "")}))
-            elif delta.get("type") == "thinking_delta":
+            elif isinstance(delta, dict) and delta.get("type") == "thinking_delta":
                 events.append(RuntimeEvent("run.thinking.delta", {"text": delta.get("delta", "")}))
-            if isinstance(value.get("usage"), dict):
-                events.append(RuntimeEvent("run.usage.updated", cast(dict[str, Any], value["usage"])))
+            usage = value.get("usage")
+            if isinstance(usage, dict):
+                events.append(RuntimeEvent("run.usage.updated", usage))
             return events
         mapping = {
             "tool_execution_start": "run.tool.started",
@@ -334,7 +338,7 @@ class PiRuntime:
             "tool_execution_end": "run.tool.finished",
             "extension_error": "run.error",
         }
-        normalized = mapping.get(cast(str, event_type))
+        normalized = mapping.get(event_type) if isinstance(event_type, str) else None
         if normalized is None:
             return []
         return [RuntimeEvent(normalized, {key: item for key, item in value.items() if key != "type"})]

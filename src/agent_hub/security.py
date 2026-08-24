@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+
+from agent_hub.json_data import JSONValue
 
 _SECRET_MARKERS = ("API_KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
 
@@ -14,11 +15,15 @@ def redact_text(value: str) -> str:
     return redacted
 
 
-def redact_data(value: Any) -> Any:
+def redact_data(value: dict[str, JSONValue]) -> dict[str, JSONValue]:
+    return {key: _redact_value(item) for key, item in value.items()}
+
+
+def _redact_value(value: JSONValue) -> JSONValue:
     if isinstance(value, str):
         return redact_text(value)
     if isinstance(value, dict):
-        return {key: redact_data(item) for key, item in value.items()}
+        return {key: _redact_value(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [redact_data(item) for item in value]
+        return [_redact_value(item) for item in value]
     return value

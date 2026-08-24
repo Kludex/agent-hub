@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, cast
@@ -28,7 +28,7 @@ class SlowTestModel(TestModel):
         model_settings: ModelSettings | None,
         model_request_parameters: ModelRequestParameters,
         run_context: RunContext[Any] | None = None,
-    ) -> AsyncIterator[StreamedResponse]:
+    ) -> AsyncGenerator[StreamedResponse]:
         await anyio.sleep_forever()  # pragma: no cover - cancellation may arrive before model startup
         yield cast(StreamedResponse, None)  # pragma: no cover - AnyIO never returns from sleep_forever()
 
@@ -98,9 +98,8 @@ async def test_pydantic_runtime_can_steer_follow_and_abort_an_active_run(tmp_pat
         await runtime.steer(handle, "steer")
         await runtime.follow_up(handle, "follow")
         await runtime.abort(handle)
-        error = await receive.receive()
+        assert await receive.receive() == "Pydantic AI run was aborted"
 
-    assert error == "Pydantic AI run was aborted"
     await runtime.stop(handle)
     await runtime.close()
     await send.aclose()

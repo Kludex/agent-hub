@@ -32,14 +32,14 @@ class StartRunRequest:
 @dataclass(frozen=True)
 class RuntimeEvent:
     type: str
-    data: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
 @dataclass(frozen=True)
 class RuntimeResult:
     text: str
-    usage: dict[str, Any] = field(default_factory=dict)
-    restoration: dict[str, Any] = field(default_factory=dict)
+    usage: dict[str, Any] = field(default_factory=dict[str, Any])
+    restoration: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
 class AgentRuntime(Protocol):

@@ -259,6 +259,13 @@ async def test_codepuppy_runtime_reports_startup_and_restoration_capability_fail
         {"profile": "task", "prompt": "unused", "cwd": str(tmp_path), "model": "invalid-model"},
     )
     assert (await codepuppy_hub.wait(invalid["runId"]))["state"] == "failed"
+    invalid_data = await codepuppy_hub.rpc(
+        "agent.spawn",
+        {"profile": "task", "prompt": "unused", "cwd": str(tmp_path), "model": "invalid-model-error"},
+    )
+    invalid_data_run = await codepuppy_hub.wait(invalid_data["runId"])
+    assert invalid_data_run["state"] == "failed"
+    assert "invalid fixture model data" in invalid_data_run["error"]
 
     completed = await codepuppy_hub.rpc("agent.spawn", {"profile": "sticky", "prompt": "persist", "cwd": str(tmp_path)})
     assert (await codepuppy_hub.wait(completed["runId"]))["state"] == "succeeded"

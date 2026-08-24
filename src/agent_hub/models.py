@@ -27,7 +27,7 @@ class AgentRecord:
     depth: int = 0
     parent_agent_id: str | None = None
     root_session_id: str | None = None
-    restoration: dict[str, Any] = field(default_factory=dict)
+    restoration: dict[str, Any] = field(default_factory=dict[str, Any])
     created_at: str = field(default_factory=now)
     updated_at: str = field(default_factory=now)
 
@@ -45,7 +45,7 @@ class RunRecord:
     started_at: str | None = None
     settled_at: str | None = None
     result: str | None = None
-    usage: dict[str, Any] = field(default_factory=dict)
+    usage: dict[str, Any] = field(default_factory=dict[str, Any])
     error: str | None = None
 
     def as_dict(self) -> dict[str, Any]:

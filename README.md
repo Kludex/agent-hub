@@ -263,6 +263,9 @@ The Pi extension transports commands and renders state. The persistent manager o
 
 ```bash
 uv sync
+uv run ruff format --check .
+uv run ruff check .
+uv run pyright
 uv run pytest
 cd extension
 npm install

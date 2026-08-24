@@ -13,6 +13,7 @@ import pytest
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.server.mcpserver import Context
 from mcp.types import CallToolResult
+from pydantic import TypeAdapter
 
 from agent_hub.client import HubClient, HubClientError
 from agent_hub.mcp_bridge import MCPBridge, create_mcp_server
@@ -21,8 +22,7 @@ from tests.conftest import RunningHub
 
 def output(result: CallToolResult) -> dict[str, Any]:
     assert result.is_error is False
-    assert isinstance(result.structured_content, dict)
-    return cast(dict[str, Any], result.structured_content)
+    return TypeAdapter(dict[str, Any]).validate_python(result.structured_content)
 
 
 @pytest.mark.anyio
@@ -102,7 +102,7 @@ async def test_stdio_bridge_delegates_and_manages_agents(hub: RunningHub, tmp_pa
 @dataclass
 class FakeContext:
     request_id: str = "request"
-    progress: list[float] = field(default_factory=list)
+    progress: list[float] = field(default_factory=list[float])
 
     async def report_progress(self, progress: float, total: float | None, message: str | None) -> None:
         self.progress.append(progress)

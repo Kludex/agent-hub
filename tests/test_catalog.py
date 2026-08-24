@@ -54,7 +54,11 @@ async def test_catalog_reader_loads_http_sources() -> None:
 @pytest.mark.anyio
 async def test_cli_catalog_uses_configured_data_directory(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     source = CatalogSource(name="local", location=str(Path("registry/index.json").resolve()))
-    monkeypatch.setattr("agent_hub.cli.load_catalog_sources", lambda _data_dir: (source,))
+
+    def configured_sources(_data_dir: Path | None) -> tuple[CatalogSource, ...]:
+        return (source,)
+
+    monkeypatch.setattr("agent_hub.cli.load_catalog_sources", configured_sources)
 
     output = await run_catalog(HubConfig(data_dir=tmp_path), ("search", "planning"), None)
 

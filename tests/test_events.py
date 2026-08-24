@@ -28,10 +28,10 @@ async def test_replays_events_and_disconnects_a_slow_subscriber(tmp_path: Path) 
         task_group.start_soon(receive_first)
         await journal.emit("first")
         first = await received.receive()
+        assert first.type == "first"
     await journal.emit("second")
     await journal.emit("overflow")
 
-    assert first.type == "first"
     assert (await anext(replay)).type == "second"
     with pytest.raises(StopAsyncIteration):
         await anext(replay)
