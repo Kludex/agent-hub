@@ -39,6 +39,156 @@
           "version": "1.0.0"
         }
       ]
+    },
+    {
+      "access": "shared-write",
+      "agent_spec": false,
+      "description": "Builds an evidence-backed maintainer briefing from pull requests, issues, CI, security alerts, and releases.",
+      "external_dependencies": [
+        "Pi",
+        "an authenticated GitHub CLI"
+      ],
+      "keywords": [
+        "maintenance",
+        "github",
+        "triage",
+        "pull-requests",
+        "issues",
+        "ci"
+      ],
+      "latest_version": "1.0.0",
+      "mcp_servers": [],
+      "name": "maintainer-inbox",
+      "network_access": true,
+      "owner": "agent-hub",
+      "runtime": "pi",
+      "tools": [],
+      "versions": [
+        {
+          "bundle_path": "agents/agent-hub/maintainer-inbox",
+          "files": {
+            "README.md": "6ed95f9a6f0be06f7c8b52074291fe003bb49953f7ff5a278c0a8d7c9868f119",
+            "agent.toml": "18f8d34ebca670ca83eba9cb5272b52fb4bc74f8725e552c182aa873b274b216",
+            "evaluations/role-contract.toml": "bc9f20bea910799ac75a1e6a08fbb542b8db3e4657ee30d0df95950646634e22",
+            "instructions.md": "1584b6bd682bf09c486804b7660ba84b69a1d46258b8886da273c6e9ea7b7d78"
+          },
+          "sha256": "0c91afb162dc802390894208ee665ab3ba004d55a376e2bade68426c1385d9b0",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "access": "shared-write",
+      "agent_spec": false,
+      "description": "Investigates latency, throughput, memory, benchmark regressions, and flaky performance measurements.",
+      "external_dependencies": [
+        "Pi",
+        "the repository benchmark and profiling toolchain"
+      ],
+      "keywords": [
+        "performance",
+        "benchmark",
+        "memory",
+        "profiling",
+        "regression",
+        "codspeed"
+      ],
+      "latest_version": "1.0.0",
+      "mcp_servers": [],
+      "name": "performance-investigator",
+      "network_access": true,
+      "owner": "agent-hub",
+      "runtime": "pi",
+      "tools": [],
+      "versions": [
+        {
+          "bundle_path": "agents/agent-hub/performance-investigator",
+          "files": {
+            "README.md": "55dfb8fca1af22a13cdf4843008d134ff3967c6934fc70cfa62d78c85454dbfc",
+            "agent.toml": "6c4c3c15e74347a7c321e8f87993ea57c9ced7a2dd0468652a45a3f89aa0773a",
+            "evaluations/role-contract.toml": "47eaa6a899f35561e4c272c3c297391987c1b9034953f26ed81b522d7f466d0f",
+            "instructions.md": "e15230e3b3aa68bcb1a5d1c42fc1b1315794944374063da018adc2547d49e1b6"
+          },
+          "sha256": "3d69a861be8c3c694438d9a2ee2cf90ee3132a0b44f24dbbfeb8fd45e2af2704",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "access": "shared-write",
+      "agent_spec": false,
+      "description": "Takes a pull request from initial review through tested follow-up changes and a clear merge-readiness decision.",
+      "external_dependencies": [
+        "Pi",
+        "an authenticated GitHub CLI",
+        "the repository test toolchain"
+      ],
+      "keywords": [
+        "pull-request",
+        "review",
+        "ci",
+        "github",
+        "testing",
+        "background"
+      ],
+      "latest_version": "1.0.0",
+      "mcp_servers": [],
+      "name": "pr-shepherd",
+      "network_access": true,
+      "owner": "agent-hub",
+      "runtime": "pi",
+      "tools": [],
+      "versions": [
+        {
+          "bundle_path": "agents/agent-hub/pr-shepherd",
+          "files": {
+            "README.md": "e211d704e44cf657b2fa00b1782e4ac4710f31e75b42d15cc3442d7e96d99c75",
+            "agent.toml": "58b06de1aa32c79d3ede38858d3fda83579cea0a84c3a57df77fdbdc1021a5c7",
+            "evaluations/role-contract.toml": "a51ebacc89b3f41a96506274146756a4e2ceb7ad01d72cb83cdd7d90155ab12a",
+            "instructions.md": "56b8466bb867ebe36999c089f07c66b5162d328d14306e81c1e43e17ac40e16a"
+          },
+          "sha256": "ab240e6a45f03ecabd598b163646ccd8a7c75b7697e165bd93966b3cdd3fa1e2",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "access": "shared-write",
+      "agent_spec": false,
+      "description": "Correlates observability and deployment evidence to diagnose production and staging incidents without mutating systems.",
+      "external_dependencies": [
+        "Pi",
+        "configured read-only observability and infrastructure tools"
+      ],
+      "keywords": [
+        "sre",
+        "incident",
+        "observability",
+        "kubernetes",
+        "logfire",
+        "alerts",
+        "read-only"
+      ],
+      "latest_version": "1.0.0",
+      "mcp_servers": [],
+      "name": "sre-investigator",
+      "network_access": true,
+      "owner": "agent-hub",
+      "runtime": "pi",
+      "tools": [],
+      "versions": [
+        {
+          "bundle_path": "agents/agent-hub/sre-investigator",
+          "files": {
+            "README.md": "c7efb1dae1b2971788ff760d4b58582bd6abfdb351723ca08330b60b416d0420",
+            "agent.toml": "ee24feb8ffdbc5766166199683cdcb40cf70c2901884f768f2fa00653aab0962",
+            "evaluations/role-contract.toml": "4aed3489ffcb927cc88452cb67f731528f5ed98ada0227df8442b069e2d4e16a",
+            "instructions.md": "d56d86b9a590133b0345d6300dcaa009f395895b1eedf97e24ff2d24cd190e36"
+          },
+          "sha256": "ed43e5927adc5c0bf0fcf1c119855b20209cf83f3fc42ff94356f1ed9faf75b2",
+          "version": "1.0.0"
+        }
+      ]
     }
   ],
   "schema_version": 1

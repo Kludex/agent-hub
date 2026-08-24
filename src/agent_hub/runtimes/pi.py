@@ -75,6 +75,8 @@ class PiRuntime:
         request.session_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         request.session_directory.chmod(0o700)
         arguments = ["--mode", "rpc", "--session-dir", str(request.session_directory)]
+        if request.profile.instructions is not None:
+            arguments.extend(["--append-system-prompt", request.profile.instructions])
         model = request.model or request.profile.model
         if model is not None:
             arguments.extend(["--model", model])

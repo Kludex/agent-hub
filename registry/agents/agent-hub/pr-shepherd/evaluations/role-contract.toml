@@ -1,0 +1,4 @@
+schema_version = 1
+name = "pull-request-shepherd-contract"
+passed = true
+summary = "The instructions define merge-readiness evidence, bounded CI waiting, validation, and protected GitHub actions."

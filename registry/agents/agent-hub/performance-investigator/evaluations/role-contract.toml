@@ -1,0 +1,4 @@
+schema_version = 1
+name = "performance-investigation-contract"
+passed = true
+summary = "The instructions require controlled baselines, repeated measurements, profiling, and explicit uncertainty."
