@@ -1,0 +1,12 @@
+schema_version = 1
+owner = "agent-hub"
+name = "scout"
+version = "1.0.0"
+description = "A read-only agent that explores a repository and reports relevant code."
+keywords = ["exploration", "search", "read-only"]
+runtime = "pi"
+allow_model_override = true
+access = "read-only"
+keep_alive = false
+max_runtime_seconds = 900
+external_dependencies = ["pi"]

@@ -1,0 +1,12 @@
+schema_version = 1
+owner = "agent-hub"
+name = "reviewer"
+version = "1.0.0"
+description = "A read-only agent that reviews changes for defects and missing tests."
+keywords = ["review", "quality", "read-only"]
+runtime = "pi"
+allow_model_override = true
+access = "read-only"
+keep_alive = false
+max_runtime_seconds = 900
+external_dependencies = ["pi"]

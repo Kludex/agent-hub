@@ -1,0 +1,12 @@
+schema_version = 1
+owner = "agent-hub"
+name = "task"
+version = "1.0.0"
+description = "A general-purpose coding agent that implements and verifies repository changes."
+keywords = ["coding", "implementation", "testing"]
+runtime = "pi"
+allow_model_override = true
+access = "shared-write"
+keep_alive = false
+max_runtime_seconds = 900
+external_dependencies = ["pi"]
