@@ -10,7 +10,7 @@ from starlette.responses import Response
 from starlette.routing import Route
 
 from agent_hub.catalog import BUILTIN_CATALOG_URL, CatalogReader, CatalogSource, load_catalog_sources
-from agent_hub.cli import run_catalog
+from agent_hub.cli import run_catalog, run_installed_agents
 from agent_hub.config import HubConfig
 
 
@@ -60,6 +60,7 @@ async def test_cli_catalog_uses_configured_data_directory(monkeypatch: pytest.Mo
 
     assert output.startswith("agent-hub/reviewer 1.0.0")
     assert "agent-hub (built-in)" in await run_catalog(HubConfig(data_dir=tmp_path), ("source", "list"), None)
+    assert await run_installed_agents(HubConfig(data_dir=tmp_path), ("list",), None, False) == "No agents installed."
 
 
 def test_agent_hub_repository_is_the_builtin_catalog_source() -> None:

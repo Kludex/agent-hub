@@ -35,6 +35,7 @@ def generate_registry_index(registry: Path) -> dict[str, Any]:
                 "access": latest.access,
                 "tools": list(latest.tools),
                 "mcp_servers": list(latest.mcp_servers),
+                "network_access": latest.network_access,
                 "external_dependencies": list(latest.external_dependencies),
                 "latest_version": latest.version,
                 "versions": [_index_version(registry, bundle) for bundle in bundles],

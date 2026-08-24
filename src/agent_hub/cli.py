@@ -19,6 +19,7 @@ from agent_hub.catalog import CatalogReader, load_catalog_sources
 from agent_hub.catalog_commands import CatalogService, execute_catalog_command
 from agent_hub.catalog_sources import CatalogSourceStore, execute_catalog_source_command
 from agent_hub.config import HubConfig, load_profiles
+from agent_hub.installed_agents import InstalledAgentService, execute_installed_agent_command
 from agent_hub.mcp_bridge import serve_mcp
 from agent_hub.service import install, uninstall
 
@@ -26,7 +27,10 @@ from agent_hub.service import install, uninstall
 def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - exercised in a subprocess
     parser = argparse.ArgumentParser(prog="agent-hub")
     parser.add_argument(
-        "command", nargs="?", choices=("serve", "install", "uninstall", "mcp", "catalog"), default="serve"
+        "command",
+        nargs="?",
+        choices=("serve", "install", "uninstall", "mcp", "catalog", "agent"),
+        default="serve",
     )
     parser.add_argument("operands", nargs="*")
     parser.add_argument("--data-dir", type=Path, default=Path.home() / ".agent-hub")
@@ -35,6 +39,7 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     parser.add_argument("--codepuppy-executable", default="code-puppy")
     parser.add_argument("--allow-project-profiles", action="store_true")
     parser.add_argument("--version")
+    parser.add_argument("--yes", action="store_true")
     values = parser.parse_args(arguments)
     logfire.configure(send_to_logfire=False)
     config = HubConfig(
@@ -63,8 +68,27 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
             backend_options=backend_options,
         )
         sys.stdout.write(f"{output}\n")
+    elif values.command == "agent":
+        output = anyio.run(
+            run_installed_agents,
+            config,
+            tuple(values.operands),
+            values.version,
+            values.yes,
+            backend_options=backend_options,
+        )
+        sys.stdout.write(f"{output}\n")
     else:
         anyio.run(serve, config, backend_options=backend_options)
+
+
+async def run_installed_agents(
+    config: HubConfig, arguments: tuple[str, ...], version: str | None, confirmed: bool
+) -> str:
+    async with httpx2.AsyncClient(follow_redirects=True) as client:
+        catalog = CatalogService(CatalogReader(client), load_catalog_sources(config.data_dir), config.data_dir)
+        service = InstalledAgentService(catalog, config.data_dir)
+        return await execute_installed_agent_command(service, arguments, version, confirmed=confirmed)
 
 
 async def run_catalog(config: HubConfig, arguments: tuple[str, ...], version: str | None) -> str:

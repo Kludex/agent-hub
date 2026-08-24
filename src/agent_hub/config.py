@@ -46,6 +46,7 @@ class AgentProfile(BaseModel):
     instructions: str | None = None
     tools: tuple[str, ...] = ()
     mcp_servers: tuple[str, ...] = ()
+    network_access: bool = False
     usage_limits: UsageLimitSettings = Field(default_factory=UsageLimitSettings)
     allow_delegation: bool = False
 

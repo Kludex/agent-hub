@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from agent_hub.catalog import CatalogReader, CatalogSource
-from agent_hub.catalog_models import CatalogAgent, CatalogVersion, load_bundle
+from agent_hub.catalog_models import AgentBundle, CatalogAgent, CatalogVersion, load_bundle
 from agent_hub.registry_index import calculate_bundle_digests
 
 
@@ -45,24 +45,31 @@ class CatalogService:
         return f"{_describe(match.agent, selected)}\n\n{readme.decode().strip()}"
 
     async def install(self, identity: str, version: str | None = None) -> str:
-        match = await self._find(identity)
-        selected = self._version(match.agent, version)
-        target = self._data_dir / "agents" / match.agent.owner / match.agent.name / selected.version
-        if target.exists():
-            raise CatalogError(f"{identity} {selected.version} is already installed")
         staging_root = self._data_dir / "catalog" / "staging"
         staging_root.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=staging_root) as temporary:
-            bundle_path = Path(temporary) / match.agent.owner / match.agent.name / selected.version
-            bundle_path.mkdir(parents=True)
-            await self._download(match.source, selected, bundle_path)
-            bundle = load_bundle(bundle_path)
-            digest, files = calculate_bundle_digests(bundle_path)
-            if digest != selected.sha256 or files != selected.files:
-                raise CatalogError(f"Digest verification failed for {identity} {selected.version}")
+            match, selected, bundle = await self.download(identity, Path(temporary), version)
+            identity_path = self._data_dir / "agents" / match.agent.owner / match.agent.name
+            if identity_path.is_dir() and any(identity_path.iterdir()):
+                raise CatalogError(f"{identity} is already installed")
+            target = identity_path / selected.version
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(bundle.path), target)
         return f"{_describe(match.agent, selected)}\nInstalled at {target}"
+
+    async def download(
+        self, identity: str, destination: Path, version: str | None = None
+    ) -> tuple[CatalogMatch, CatalogVersion, AgentBundle]:
+        match = await self._find(identity)
+        selected = self._version(match.agent, version)
+        bundle_path = destination / match.agent.owner / match.agent.name / selected.version
+        bundle_path.mkdir(parents=True)
+        await self._download(match.source, selected, bundle_path)
+        bundle = load_bundle(bundle_path)
+        digest, files = calculate_bundle_digests(bundle_path)
+        if digest != selected.sha256 or files != selected.files:
+            raise CatalogError(f"Digest verification failed for {identity} {selected.version}")
+        return match, selected, bundle
 
     async def _find(self, identity: str) -> CatalogMatch:
         matches = [match for match in await self.browse() if match.agent.identity == identity]
@@ -125,6 +132,7 @@ def _describe(agent: CatalogAgent, version: CatalogVersion) -> str:
         f"{agent.identity} {version.version}\n"
         f"Runtime: {agent.runtime}\n"
         f"Access: {agent.access}\n"
+        f"Network access: {'allowed' if agent.network_access else 'denied'}\n"
         f"Tools: {tools}\n"
         f"MCP servers: {mcp_servers}\n"
         f"External dependencies: {dependencies}"

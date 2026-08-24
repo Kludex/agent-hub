@@ -34,6 +34,7 @@ def test_registry_index_contains_search_metadata_versions_and_digests(tmp_path: 
         "access": "read-only",
         "tools": [],
         "mcp_servers": [],
+        "network_access": False,
         "external_dependencies": ["pi"],
         "latest_version": "1.1.0",
         "versions": agent["versions"],

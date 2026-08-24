@@ -34,6 +34,7 @@ class CatalogAgent(BaseModel):
     access: AccessMode
     tools: tuple[str, ...] = ()
     mcp_servers: tuple[str, ...] = ()
+    network_access: bool = False
     external_dependencies: tuple[str, ...] = ()
     latest_version: str
     versions: tuple[CatalogVersion, ...]
@@ -68,6 +69,7 @@ class AgentManifest(BaseModel):
     max_runtime_seconds: float = 900
     tools: tuple[str, ...] = ()
     mcp_servers: tuple[str, ...] = ()
+    network_access: bool = False
     external_dependencies: tuple[str, ...] = ()
     usage_limits: UsageLimitSettings = Field(default_factory=UsageLimitSettings)
     allow_delegation: bool = False
@@ -94,6 +96,7 @@ class AgentManifest(BaseModel):
             instructions=instructions or None,
             tools=self.tools,
             mcp_servers=self.mcp_servers,
+            network_access=self.network_access,
             usage_limits=self.usage_limits,
             allow_delegation=self.allow_delegation,
         )
