@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import tomllib
 from collections.abc import Sequence
@@ -11,7 +12,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent_hub.catalog_models import load_bundle
+from agent_hub.catalog_models import find_bundle_paths, load_bundle
 
 
 class RegistryValidationError(ValueError):
@@ -28,9 +29,7 @@ class EvaluationResult(BaseModel):
 
 
 def validate_registry(registry: Path) -> None:
-    for path in sorted((registry / "agents").glob("*/*/*")):
-        if not path.is_dir():
-            continue
+    for path in find_bundle_paths(registry / "agents"):
         for item in path.rglob("*"):
             if item.is_symlink():
                 raise RegistryValidationError(f"Bundle must not contain symlinks: {item}")
@@ -59,13 +58,29 @@ def validate_immutable_versions(repository: Path, base_ref: str) -> None:
     )
     existing_versions = {_version_prefix(path) for path in completed.stdout.splitlines()}
     changed = subprocess.run(
-        ["git", "diff", "--name-only", f"{base_ref}...HEAD", "--", "registry/agents"],
+        [
+            "git",
+            "diff",
+            "--name-status",
+            "--find-renames=100%",
+            f"{base_ref}...HEAD",
+            "--",
+            "registry/agents",
+        ],
         cwd=repository,
         check=True,
         capture_output=True,
         text=True,
     )
-    modified = sorted({_version_prefix(path) for path in changed.stdout.splitlines()} & existing_versions)
+    changed_versions: set[str] = set()
+    for line in changed.stdout.splitlines():
+        status, *paths = line.split("\t")
+        if status == "A":
+            continue
+        if status == "R100" and _is_bundle_relocation(paths[0], paths[1]):
+            continue
+        changed_versions.add(_version_prefix(paths[0]))
+    modified = sorted(changed_versions & existing_versions)
     if modified:
         raise RegistryValidationError(
             f"Published versions are immutable; add a new version instead: {', '.join(modified)}"
@@ -100,7 +115,21 @@ def _load_evaluation(path: Path) -> EvaluationResult:
 
 
 def _version_prefix(path: str) -> str:
-    return "/".join(Path(path).parts[:5])
+    parts = Path(path).parts
+    length = 5 if len(parts) > 4 and re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", parts[4]) else 4
+    return "/".join(parts[:length])
+
+
+def _is_bundle_relocation(source: str, target: str) -> bool:
+    source_root = _version_prefix(source)
+    target_root = _version_prefix(target)
+    source_parts = Path(source_root).parts
+    target_parts = Path(target_root).parts
+    if source_parts[:4] != target_parts[:4]:
+        return False
+    source_relative = Path(source).relative_to(source_root)
+    target_relative = Path(target).relative_to(target_root)
+    return source_relative == target_relative
 
 
 if __name__ == "__main__":  # pragma: no cover - module entry point

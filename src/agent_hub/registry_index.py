@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from agent_hub.catalog_models import AgentBundle, load_bundle
+from agent_hub.catalog_models import AgentBundle, find_bundle_paths, load_bundle
 
 
 class RegistryIndexError(ValueError):
@@ -16,10 +16,9 @@ class RegistryIndexError(ValueError):
 
 def generate_registry_index(registry: Path) -> dict[str, Any]:
     grouped: dict[str, list[AgentBundle]] = {}
-    for path in sorted((registry / "agents").glob("*/*/*")):
-        if path.is_dir():
-            bundle = load_bundle(path)
-            grouped.setdefault(bundle.manifest.identity, []).append(bundle)
+    for path in find_bundle_paths(registry / "agents"):
+        bundle = load_bundle(path)
+        grouped.setdefault(bundle.manifest.identity, []).append(bundle)
 
     agents: list[dict[str, Any]] = []
     for identity in sorted(grouped):

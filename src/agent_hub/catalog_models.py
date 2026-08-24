@@ -118,6 +118,18 @@ class AgentBundle:
     agent_spec: AgentSpec | None
 
 
+def find_bundle_paths(agents_path: Path) -> tuple[Path, ...]:
+    paths: list[Path] = []
+    for identity_path in sorted(agents_path.glob("*/*")):
+        if not identity_path.is_dir():
+            continue
+        if (identity_path / "agent.toml").is_file():
+            paths.append(identity_path)
+        else:
+            paths.extend(sorted(path for path in identity_path.iterdir() if path.is_dir()))
+    return tuple(paths)
+
+
 def load_bundle(path: Path) -> AgentBundle:
     required = {"agent.toml", "instructions.md", "README.md"}
     files = {item.relative_to(path).as_posix() for item in path.rglob("*") if item.is_file()}
@@ -133,9 +145,13 @@ def load_bundle(path: Path) -> AgentBundle:
         raise CatalogValidationError(f"Bundle is missing AgentSpec file: {manifest.agent_spec}")
 
     expected = (manifest.owner, manifest.name, manifest.version)
-    actual = (path.parent.parent.name, path.parent.name, path.name)
-    if actual != expected:
-        raise CatalogValidationError(f"Bundle path must end with {manifest.owner}/{manifest.name}/{manifest.version}")
+    versioned_path = (path.parent.parent.name, path.parent.name, path.name)
+    unversioned_path = (path.parent.name, path.name, manifest.version)
+    if expected not in {versioned_path, unversioned_path}:
+        raise CatalogValidationError(
+            f"Bundle path must end with {manifest.owner}/{manifest.name} or "
+            f"{manifest.owner}/{manifest.name}/{manifest.version}"
+        )
     instructions = (path / "instructions.md").read_text(encoding="utf-8")
     readme = (path / "README.md").read_text(encoding="utf-8")
     if not instructions.strip() or not readme.strip():

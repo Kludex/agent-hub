@@ -82,6 +82,35 @@ def test_registry_rejects_failed_evaluations_and_unknown_files(tmp_path: Path) -
         validate_registry(registry)
 
 
+def test_immutable_versions_allow_relocation_but_reject_identity_changes(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    registry, bundle = _copy_registry(repository)
+    _git(repository, "init")
+    _git(repository, "config", "user.email", "catalog@example.com")
+    _git(repository, "config", "user.name", "Catalog Test")
+    _git(repository, "add", ".")
+    _git(repository, "commit", "-m", "baseline")
+    baseline = _git(repository, "rev-parse", "HEAD").stdout.strip()
+
+    target = bundle.parent
+    temporary = registry / "bundle"
+    bundle.rename(temporary)
+    target.rmdir()
+    temporary.rename(target)
+    _git(repository, "add", ".")
+    _git(repository, "commit", "-m", "flatten bundle")
+
+    validate_immutable_versions(repository, baseline)
+
+    other = registry / "agents" / "other" / "implementation-planner"
+    other.parent.mkdir(parents=True)
+    target.rename(other)
+    _git(repository, "add", ".")
+    _git(repository, "commit", "-m", "change identity")
+    with pytest.raises(RegistryValidationError, match="Published versions are immutable"):
+        validate_immutable_versions(repository, baseline)
+
+
 def test_immutable_versions_reject_changes_but_allow_new_versions(tmp_path: Path) -> None:
     repository = tmp_path / "repository"
     registry, bundle = _copy_registry(repository)
@@ -110,7 +139,7 @@ def test_immutable_versions_reject_changes_but_allow_new_versions(tmp_path: Path
 def _copy_registry(tmp_path: Path) -> tuple[Path, Path]:
     registry = tmp_path / "registry"
     bundle = registry / "agents" / "agent-hub" / "implementation-planner" / "1.0.0"
-    shutil.copytree(Path("registry/agents/agent-hub/implementation-planner/1.0.0"), bundle)
+    shutil.copytree(Path("registry/agents/agent-hub/implementation-planner"), bundle)
     ignored = registry / "agents" / "not" / "a"
     ignored.mkdir(parents=True)
     (ignored / "bundle").write_text("ignored", encoding="utf-8")

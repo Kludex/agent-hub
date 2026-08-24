@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from agent_hub.catalog_models import AgentManifest, CatalogValidationError, load_bundle
+from agent_hub.catalog_models import AgentManifest, CatalogValidationError, find_bundle_paths, load_bundle
 
 
 def test_curated_registry_bundles_follow_the_catalog_schema() -> None:
-    paths = sorted(Path("registry/agents").glob("*/*/*"))
+    paths = find_bundle_paths(Path("registry/agents"))
 
     bundles = [load_bundle(path) for path in paths]
 

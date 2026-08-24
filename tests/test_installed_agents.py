@@ -73,7 +73,7 @@ async def test_installed_agent_commands_report_missing_duplicates_and_usage(tmp_
 
 def _registry_with_updates(tmp_path: Path) -> Path:
     registry = tmp_path / "registry"
-    source = Path("registry/agents/agent-hub/implementation-planner/1.0.0")
+    source = Path("registry/agents/agent-hub/implementation-planner")
     for version in ("1.0.0", "1.1.0", "2.0.0"):
         target = registry / "agents" / "agent-hub" / "implementation-planner" / version
         shutil.copytree(source, target)

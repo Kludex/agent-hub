@@ -45,7 +45,7 @@ async def test_catalog_reader_loads_http_sources() -> None:
         source = CatalogSource(name="remote", location="http://catalog/index.json")
 
         index = await reader.index(source)
-        content = await reader.read(source, "agents/agent-hub/implementation-planner/1.0.0/README.md")
+        content = await reader.read(source, "agents/agent-hub/implementation-planner/README.md")
 
     assert index.schema_version == 1
     assert content == b"bundle"

@@ -11,7 +11,7 @@ from agent_hub.registry_index import RegistryIndexError, generate_registry_index
 
 def test_registry_index_contains_search_metadata_versions_and_digests(tmp_path: Path) -> None:
     registry = tmp_path / "registry"
-    source = Path("registry/agents/agent-hub/implementation-planner/1.0.0")
+    source = Path("registry/agents/agent-hub/implementation-planner")
     first = registry / "agents" / "agent-hub" / "implementation-planner" / "1.0.0"
     second = registry / "agents" / "agent-hub" / "implementation-planner" / "1.1.0"
     shutil.copytree(source, first)
@@ -21,6 +21,7 @@ def test_registry_index_contains_search_metadata_versions_and_digests(tmp_path: 
     ignored = registry / "agents" / "not" / "a"
     ignored.mkdir(parents=True)
     (ignored / "bundle").write_text("not a directory", encoding="utf-8")
+    (ignored.parent / "file").write_text("not an agent", encoding="utf-8")
 
     index = generate_registry_index(registry)
 

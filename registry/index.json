@@ -27,7 +27,7 @@
       ],
       "versions": [
         {
-          "bundle_path": "agents/agent-hub/implementation-planner/1.0.0",
+          "bundle_path": "agents/agent-hub/implementation-planner",
           "files": {
             "README.md": "6429a0570fb1eb859b982e8d17985da441e30124d91edb611f3390f1291104aa",
             "agent-spec.yaml": "381c84ea249479294faf47a1fd982e496e5177e03e25e67f28453a7b7d283d02",
