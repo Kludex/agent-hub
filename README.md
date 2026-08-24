@@ -4,60 +4,9 @@ Agent Hub is a local control plane for coding agents. It schedules Pi, Pydantic 
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph Clients
-        PiSession["Pi session<br/>task tool and /hub"]
-        Claude["Claude Code"]
-        Codex["Codex"]
-        MCP["agent-hub mcp<br/>stdio bridge"]
-    end
+[![Agent Hub architecture](docs/architecture.svg)](docs/architecture.svg)
 
-    subgraph Hub["Persistent Agent Hub user service"]
-        API["JSON-RPC API<br/>event stream"]
-        Manager["Runtime-neutral manager"]
-        Scheduler["Concurrency scheduler"]
-        Journal["Replayable event journal"]
-        Profiles["Agent profiles"]
-        Database[("SQLite")]
-    end
-
-    subgraph Runtimes
-        PiRuntime["Pi runtime adapter"]
-        PydanticRuntime["Pydantic AI runtime adapter"]
-        CodePuppyRuntime["CodePuppy ACP adapter"]
-        PiProcess["Pi RPC subprocess"]
-        PydanticAgent["Pydantic AI agent"]
-        CodePuppyProcess["CodePuppy ACP subprocess"]
-    end
-
-    subgraph Workspaces
-        Shared["Shared workspace"]
-        Isolated["Detached Git worktree"]
-    end
-
-    Claude <-->|"MCP over stdio"| MCP
-    Codex <-->|"MCP over stdio"| MCP
-    MCP <-->|"JSON-RPC<br/>private Unix socket"| API
-    PiSession <-->|"JSON-RPC and events<br/>private Unix socket"| API
-    API --> Manager
-    Profiles --> Manager
-    Manager --> Scheduler
-    Manager --> Journal
-    Journal <--> Database
-    Scheduler --> PiRuntime
-    Scheduler --> PydanticRuntime
-    Scheduler --> CodePuppyRuntime
-    PiRuntime --> PiProcess
-    PydanticRuntime --> PydanticAgent
-    CodePuppyRuntime --> CodePuppyProcess
-    PiProcess --> Shared
-    PiProcess --> Isolated
-    PydanticAgent --> Shared
-    PydanticAgent --> Isolated
-    CodePuppyProcess --> Shared
-    CodePuppyProcess --> Isolated
-```
+Open the [full-size architecture diagram](docs/architecture.svg) to inspect every component and connection.
 
 The Pi extension transports commands and renders state. The persistent manager owns scheduling, recovery, event replay, and runtime processes, so agents continue when an individual Pi session closes.
 
