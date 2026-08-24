@@ -28,7 +28,7 @@ async def test_catalog_reader_loads_local_indexes_and_bundle_files(tmp_path: Pat
         index = await reader.index(source)
         content = await reader.read(source, "agents/owner/agent/1.0.0/README.md")
 
-    assert index.agents[0].identity == "agent-hub/pydantic-reviewer"
+    assert index.agents[0].identity == "agent-hub/implementation-planner"
     assert content == b"# Agent\n"
 
 
@@ -45,7 +45,7 @@ async def test_catalog_reader_loads_http_sources() -> None:
         source = CatalogSource(name="remote", location="http://catalog/index.json")
 
         index = await reader.index(source)
-        content = await reader.read(source, "agents/agent-hub/scout/1.0.0/README.md")
+        content = await reader.read(source, "agents/agent-hub/implementation-planner/1.0.0/README.md")
 
     assert index.schema_version == 1
     assert content == b"bundle"
@@ -56,10 +56,9 @@ async def test_cli_catalog_uses_configured_data_directory(monkeypatch: pytest.Mo
     source = CatalogSource(name="local", location=str(Path("registry/index.json").resolve()))
     monkeypatch.setattr("agent_hub.cli.load_catalog_sources", lambda _data_dir: (source,))
 
-    output = await run_catalog(HubConfig(data_dir=tmp_path), ("search", "review"), None)
+    output = await run_catalog(HubConfig(data_dir=tmp_path), ("search", "planning"), None)
 
-    assert "agent-hub/pydantic-reviewer 1.0.0" in output
-    assert "agent-hub/reviewer 1.0.0" in output
+    assert "agent-hub/implementation-planner 1.0.0" in output
     assert "agent-hub (built-in)" in await run_catalog(HubConfig(data_dir=tmp_path), ("source", "list"), None)
     assert await run_installed_agents(HubConfig(data_dir=tmp_path), ("list",), None, False) == "No agents installed."
 

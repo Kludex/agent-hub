@@ -12,18 +12,14 @@ def test_curated_registry_bundles_follow_the_catalog_schema() -> None:
 
     bundles = [load_bundle(path) for path in paths]
 
-    assert [bundle.manifest.identity for bundle in bundles] == [
-        "agent-hub/pydantic-reviewer",
-        "agent-hub/reviewer",
-        "agent-hub/scout",
-        "agent-hub/task",
-    ]
-    assert bundles[0].manifest.to_profile(bundles[0].instructions).instructions == bundles[0].instructions
-    assert bundles[0].manifest.to_profile(bundles[0].instructions, bundles[0].path).agent_spec == (
-        bundles[0].path / "agent-spec.yaml"
+    assert [bundle.manifest.identity for bundle in bundles] == ["agent-hub/implementation-planner"]
+    planner = bundles[0]
+    assert planner.manifest.to_profile(planner.instructions).instructions == planner.instructions
+    assert (
+        planner.manifest.to_profile(planner.instructions, planner.path).agent_spec == planner.path / "agent-spec.yaml"
     )
-    assert bundles[0].agent_spec is not None
-    assert bundles[0].agent_spec.name == "pydantic-reviewer"
+    assert planner.agent_spec is not None
+    assert planner.agent_spec.name == "implementation-planner"
 
 
 def test_bundle_allows_evaluation_files(tmp_path: Path) -> None:

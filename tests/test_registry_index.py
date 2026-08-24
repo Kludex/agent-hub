@@ -11,9 +11,9 @@ from agent_hub.registry_index import RegistryIndexError, generate_registry_index
 
 def test_registry_index_contains_search_metadata_versions_and_digests(tmp_path: Path) -> None:
     registry = tmp_path / "registry"
-    source = Path("registry/agents/agent-hub/scout/1.0.0")
-    first = registry / "agents" / "agent-hub" / "scout" / "1.0.0"
-    second = registry / "agents" / "agent-hub" / "scout" / "1.1.0"
+    source = Path("registry/agents/agent-hub/implementation-planner/1.0.0")
+    first = registry / "agents" / "agent-hub" / "implementation-planner" / "1.0.0"
+    second = registry / "agents" / "agent-hub" / "implementation-planner" / "1.1.0"
     shutil.copytree(source, first)
     shutil.copytree(source, second)
     manifest = (second / "agent.toml").read_text(encoding="utf-8")
@@ -27,24 +27,28 @@ def test_registry_index_contains_search_metadata_versions_and_digests(tmp_path: 
     agent = index["agents"][0]
     assert agent == {
         "owner": "agent-hub",
-        "name": "scout",
-        "description": "A read-only agent that explores a repository and reports relevant code.",
-        "keywords": ["exploration", "search", "read-only"],
-        "runtime": "pi",
+        "name": "implementation-planner",
+        "description": (
+            "Explores a repository and produces a grounded, execution-ready implementation plan "
+            "without modifying files."
+        ),
+        "keywords": ["planning", "architecture", "implementation", "read-only", "pydantic-ai", "agent-spec"],
+        "runtime": "pydantic-ai",
         "access": "read-only",
-        "tools": [],
+        "tools": ["read_file", "list_files"],
         "mcp_servers": [],
         "network_access": False,
-        "external_dependencies": ["pi"],
-        "agent_spec": False,
+        "external_dependencies": ["an Anthropic API key"],
+        "agent_spec": True,
         "latest_version": "1.1.0",
         "versions": agent["versions"],
     }
     assert [version["version"] for version in agent["versions"]] == ["1.1.0", "1.0.0"]
-    assert agent["versions"][0]["bundle_path"] == "agents/agent-hub/scout/1.1.0"
+    assert agent["versions"][0]["bundle_path"] == "agents/agent-hub/implementation-planner/1.1.0"
     assert len(agent["versions"][0]["sha256"]) == 64
     assert set(agent["versions"][0]["files"]) == {
         "README.md",
+        "agent-spec.yaml",
         "agent.toml",
         "evaluations/schema.toml",
         "instructions.md",

@@ -1,4 +1,0 @@
-schema_version = 1
-name = "profile-schema"
-passed = true
-summary = "The profile passes the Agent Hub bundle and profile schemas."

@@ -1,9 +1,0 @@
-name: pydantic-reviewer
-description: Reviews repository changes for defects and missing tests.
-instructions:
-  - Review the requested changes without editing files.
-  - Prioritize concrete defects, regressions, security risks, and missing tests.
-model_settings:
-  temperature: 0
-retries: 2
-end_strategy: exhaustive

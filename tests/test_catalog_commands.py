@@ -18,20 +18,19 @@ async def test_catalog_commands_browse_search_show_and_install(tmp_path: Path) -
         service = CatalogService(CatalogReader(client), (source,), tmp_path)
 
         listing = await execute_catalog_command(service, ())
-        search = await execute_catalog_command(service, ("search", "exploration"))
+        search = await execute_catalog_command(service, ("search", "planning"))
         missing_search = await execute_catalog_command(service, ("search", "does-not-exist"))
-        details = await execute_catalog_command(service, ("show", "agent-hub/scout"), "1.0.0")
-        spec_details = await execute_catalog_command(service, ("show", "agent-hub/pydantic-reviewer"), None)
-        installed = await execute_catalog_command(service, ("install", "agent-hub/scout"), None)
+        details = await execute_catalog_command(service, ("show", "agent-hub/implementation-planner"), "1.0.0")
+        installed = await execute_catalog_command(service, ("install", "agent-hub/implementation-planner"), None)
 
-    assert "agent-hub/task 1.0.0" in listing
-    assert search.startswith("agent-hub/scout 1.0.0")
+    assert "agent-hub/implementation-planner 1.0.0" in listing
+    assert search.startswith("agent-hub/implementation-planner 1.0.0")
     assert missing_search == "No agents found."
     assert "Access: read-only" in details
-    assert "External dependencies: pi" in details
-    assert "# Scout" in details
-    assert "AgentSpec: yes" in spec_details
-    target = tmp_path / "agents" / "agent-hub" / "scout" / "1.0.0"
+    assert "External dependencies: an Anthropic API key" in details
+    assert "AgentSpec: yes" in details
+    assert "# Implementation planner" in details
+    target = tmp_path / "agents" / "agent-hub" / "implementation-planner" / "1.0.0"
     assert installed.endswith(f"Installed at {target}")
     assert (target / "agent.toml").is_file()
 
@@ -44,16 +43,16 @@ async def test_catalog_commands_report_resolution_errors(tmp_path: Path) -> None
         with pytest.raises(CatalogError, match="Agent not found"):
             await service.show("other/missing")
         with pytest.raises(CatalogError, match="Version 2.0.0"):
-            await service.show("agent-hub/scout", "2.0.0")
-        await service.install("agent-hub/scout")
+            await service.show("agent-hub/implementation-planner", "2.0.0")
+        await service.install("agent-hub/implementation-planner")
         with pytest.raises(CatalogError, match="already installed"):
-            await service.install("agent-hub/scout")
+            await service.install("agent-hub/implementation-planner")
 
         duplicate = CatalogService(
             CatalogReader(client), (source, source.model_copy(update={"name": "copy"})), tmp_path
         )
         with pytest.raises(CatalogError, match="multiple sources"):
-            await duplicate.show("agent-hub/scout")
+            await duplicate.show("agent-hub/implementation-planner")
 
         with pytest.raises(CatalogError, match="Usage"):
             await execute_catalog_command(service, ("unknown",))
@@ -72,7 +71,7 @@ async def test_catalog_install_verifies_paths_and_digests(change: str, message: 
     registry = tmp_path / "registry"
     shutil.copytree("registry", registry)
     index = json.loads((registry / "index.json").read_text(encoding="utf-8"))
-    agent = next(item for item in index["agents"] if item["name"] == "scout")
+    agent = next(item for item in index["agents"] if item["name"] == "implementation-planner")
     version = agent["versions"][0]
     if change == "file_digest":
         version["files"]["README.md"] = "0" * 64
@@ -87,7 +86,7 @@ async def test_catalog_install_verifies_paths_and_digests(change: str, message: 
     async with httpx2.AsyncClient() as client:
         service = CatalogService(CatalogReader(client), (source,), tmp_path / "data")
         with pytest.raises(CatalogError, match=message):
-            await service.install("agent-hub/scout")
+            await service.install("agent-hub/implementation-planner")
 
 
 def test_catalog_match_formatter_handles_empty_results() -> None:

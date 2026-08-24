@@ -6,9 +6,9 @@ The catalog publishes versioned agent profiles. Agent Hub includes the registry 
 
 ```bash
 agent-hub catalog
-agent-hub catalog search review
-agent-hub catalog show agent-hub/reviewer
-agent-hub catalog install agent-hub/reviewer
+agent-hub catalog search planning
+agent-hub catalog show agent-hub/implementation-planner
+agent-hub catalog install agent-hub/implementation-planner
 agent-hub agent list
 ```
 
@@ -19,21 +19,21 @@ An agent identity has the form `<owner>/<name>`. The identity stays the same acr
 Installed agents are pinned to the selected version. Pass `--version` to select a different published version:
 
 ```bash
-agent-hub catalog show agent-hub/reviewer --version 1.0.0
-agent-hub catalog install agent-hub/reviewer --version 1.0.0
+agent-hub catalog show agent-hub/implementation-planner --version 1.0.0
+agent-hub catalog install agent-hub/implementation-planner --version 1.0.0
 ```
 
 ## Update and remove agents
 
 ```bash
-agent-hub agent update agent-hub/reviewer
-agent-hub agent remove agent-hub/reviewer
+agent-hub agent update agent-hub/implementation-planner
+agent-hub agent remove agent-hub/implementation-planner
 ```
 
 An update does not need confirmation when its permissions stay the same or become narrower. Agent Hub stops an update that adds tools, write access, network access, or MCP servers. Inspect the reported expansion, then confirm it explicitly:
 
 ```bash
-agent-hub agent update agent-hub/reviewer --yes
+agent-hub agent update agent-hub/implementation-planner --yes
 ```
 
 User profiles under `~/.config/agent-hub/agents/` override installed profiles with the same `<owner>/<name>`. Project profiles can also override them when you install the service with `--allow-project-profiles`.

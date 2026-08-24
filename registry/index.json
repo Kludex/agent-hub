@@ -3,133 +3,39 @@
     {
       "access": "read-only",
       "agent_spec": true,
-      "description": "A Pydantic AI AgentSpec that reviews changes without modifying the workspace.",
+      "description": "Explores a repository and produces a grounded, execution-ready implementation plan without modifying files.",
       "external_dependencies": [
         "an Anthropic API key"
       ],
       "keywords": [
+        "planning",
+        "architecture",
+        "implementation",
+        "read-only",
         "pydantic-ai",
-        "agent-spec",
-        "review",
-        "read-only"
+        "agent-spec"
       ],
       "latest_version": "1.0.0",
       "mcp_servers": [],
-      "name": "pydantic-reviewer",
+      "name": "implementation-planner",
       "network_access": false,
       "owner": "agent-hub",
       "runtime": "pydantic-ai",
-      "tools": [],
+      "tools": [
+        "read_file",
+        "list_files"
+      ],
       "versions": [
         {
-          "bundle_path": "agents/agent-hub/pydantic-reviewer/1.0.0",
+          "bundle_path": "agents/agent-hub/implementation-planner/1.0.0",
           "files": {
-            "README.md": "c56a56ab8c8c99a5dd0cc4135317cc9bd20fedcaf107728da705ce00d3a0e4de",
-            "agent-spec.yaml": "caa1dbf81b71c216dff058bc87320a089951d5ea85fb8a6e0486f05122afe148",
-            "agent.toml": "749757abd8c1c20648e24a3f2f9c41cd87c76f7c72191527d53b698d3b35e758",
-            "evaluations/schema.toml": "61e7e81124ddb003c32c141112ddb3495dce696a2eac651c4b225df9df423eb4",
-            "instructions.md": "cf8a64f4ce2f713ed3d9a2d59f54437da4d501e9e044992bc7c50d5b795896b1"
+            "README.md": "6429a0570fb1eb859b982e8d17985da441e30124d91edb611f3390f1291104aa",
+            "agent-spec.yaml": "381c84ea249479294faf47a1fd982e496e5177e03e25e67f28453a7b7d283d02",
+            "agent.toml": "0fa335de11c5773c9e0df49b1ad5b8e132625ee33f8ba73d75e163b1b635b685",
+            "evaluations/schema.toml": "5d92af759a73c0595fd5e81ed5f6c204d053b943a0fe2e10a98b83767e0a1ad9",
+            "instructions.md": "6f08cbdd3caeb9f1547a033b91cd1189d2b17370269d66013adaa1dca84591bf"
           },
-          "sha256": "5963d725afc301397c5f2107721b45b55ca58ec566820583d5310389b176f453",
-          "version": "1.0.0"
-        }
-      ]
-    },
-    {
-      "access": "read-only",
-      "agent_spec": false,
-      "description": "A read-only agent that reviews changes for defects and missing tests.",
-      "external_dependencies": [
-        "pi"
-      ],
-      "keywords": [
-        "review",
-        "quality",
-        "read-only"
-      ],
-      "latest_version": "1.0.0",
-      "mcp_servers": [],
-      "name": "reviewer",
-      "network_access": false,
-      "owner": "agent-hub",
-      "runtime": "pi",
-      "tools": [],
-      "versions": [
-        {
-          "bundle_path": "agents/agent-hub/reviewer/1.0.0",
-          "files": {
-            "README.md": "31303788c41e0805537168002cc06052eae6169239c7e857ea63062b08784f4a",
-            "agent.toml": "37ae40bfa2341f87bff82b647b529aef626162724f9d7a3781c459a5eed3ca9a",
-            "evaluations/schema.toml": "61e7e81124ddb003c32c141112ddb3495dce696a2eac651c4b225df9df423eb4",
-            "instructions.md": "23c1c0c8067ffeb498a4bb4bf70a51d51392a7074eda33480a4c0d8535d30438"
-          },
-          "sha256": "f8eec77ebd081ccb171c79e008c2b4b32f5398e4f4d97ddc0eaf313653fe151c",
-          "version": "1.0.0"
-        }
-      ]
-    },
-    {
-      "access": "read-only",
-      "agent_spec": false,
-      "description": "A read-only agent that explores a repository and reports relevant code.",
-      "external_dependencies": [
-        "pi"
-      ],
-      "keywords": [
-        "exploration",
-        "search",
-        "read-only"
-      ],
-      "latest_version": "1.0.0",
-      "mcp_servers": [],
-      "name": "scout",
-      "network_access": false,
-      "owner": "agent-hub",
-      "runtime": "pi",
-      "tools": [],
-      "versions": [
-        {
-          "bundle_path": "agents/agent-hub/scout/1.0.0",
-          "files": {
-            "README.md": "7cbc8e6c20e992e10bc98e5ed58dd145fd4c5a9c344aa71a755fda2b1bb0ac42",
-            "agent.toml": "0cf1a7aa53513cc3434e00869763799d13cc723a6c3062dca31f72d79192e9ca",
-            "evaluations/schema.toml": "61e7e81124ddb003c32c141112ddb3495dce696a2eac651c4b225df9df423eb4",
-            "instructions.md": "a9423d058e3b0cd4be8d75f10da87c1cd96145d449167215c7b312294c3dfc6d"
-          },
-          "sha256": "ec246e636f314dae2cf7dd9024dcee369a014235e2a2c2dc6475f8fa88db12fb",
-          "version": "1.0.0"
-        }
-      ]
-    },
-    {
-      "access": "shared-write",
-      "agent_spec": false,
-      "description": "A general-purpose coding agent that implements and verifies repository changes.",
-      "external_dependencies": [
-        "pi"
-      ],
-      "keywords": [
-        "coding",
-        "implementation",
-        "testing"
-      ],
-      "latest_version": "1.0.0",
-      "mcp_servers": [],
-      "name": "task",
-      "network_access": false,
-      "owner": "agent-hub",
-      "runtime": "pi",
-      "tools": [],
-      "versions": [
-        {
-          "bundle_path": "agents/agent-hub/task/1.0.0",
-          "files": {
-            "README.md": "8f6bb65f7a9e2e1443e2632d408ed4fc38da4cfafa05f17d23ad05d7191141d2",
-            "agent.toml": "607a22a34a7ed4577c0e405bacc0ef14eeafb27e5c7dbc4390f8c8ed04f65836",
-            "evaluations/schema.toml": "61e7e81124ddb003c32c141112ddb3495dce696a2eac651c4b225df9df423eb4",
-            "instructions.md": "6a16d3cfb05bc16dd7202e9635a93d005fc1bd9be5aac99626e6df8c5b1fe2d3"
-          },
-          "sha256": "76eda7ff9e75fb433df2cc4a2d1ffd9380ab14466b8d95f12f058d86bfee8f8b",
+          "sha256": "18a684de002505ff26298f68363272c0bb47470cf6ce31393e56d5a623978409",
           "version": "1.0.0"
         }
       ]

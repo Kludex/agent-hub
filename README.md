@@ -118,9 +118,9 @@ Browse and install curated profiles from the built-in Agent Hub registry:
 
 ```bash
 agent-hub catalog
-agent-hub catalog search review
-agent-hub catalog show agent-hub/reviewer
-agent-hub catalog install agent-hub/reviewer
+agent-hub catalog search planning
+agent-hub catalog show agent-hub/implementation-planner
+agent-hub catalog install agent-hub/implementation-planner
 agent-hub agent list
 ```
 

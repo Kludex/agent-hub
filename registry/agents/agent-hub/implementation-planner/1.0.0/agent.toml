@@ -1,0 +1,20 @@
+schema_version = 1
+owner = "agent-hub"
+name = "implementation-planner"
+version = "1.0.0"
+description = "Explores a repository and produces a grounded, execution-ready implementation plan without modifying files."
+keywords = ["planning", "architecture", "implementation", "read-only", "pydantic-ai", "agent-spec"]
+runtime = "pydantic-ai"
+model = "anthropic:claude-sonnet-4-6"
+allow_model_override = true
+access = "read-only"
+keep_alive = false
+max_runtime_seconds = 900
+tools = ["read_file", "list_files"]
+network_access = false
+agent_spec = "agent-spec.yaml"
+external_dependencies = ["an Anthropic API key"]
+
+[usage_limits]
+request_limit = 50
+tool_calls_limit = 100
