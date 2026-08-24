@@ -63,18 +63,23 @@ The Pi extension transports commands and renders state. The persistent manager o
 
 ## Install
 
+Install the wheel published by the [`Kludex/agent-hub`](https://github.com/Kludex/agent-hub) release workflow:
+
 ```bash
-uv run agent-hub install
+pipx install --python python3.14 \
+  https://github.com/Kludex/agent-hub/releases/download/v0.1.0/agent_hub-0.1.0-py3-none-any.whl
+agent-hub install
 ```
 
-This command installs the bundled Pi extension and starts a persistent user service. It writes a LaunchAgent on macOS or a user systemd service on Linux.
+The release includes `SHA256SUMS` for artifact verification. `agent-hub install` installs the bundled Pi extension and starts a persistent user service. It writes a LaunchAgent on macOS or a user systemd service on Linux.
 
 Restart Pi after installation. The extension provides the `task` tool and the `/hub` command.
 
 To remove the service and extension:
 
 ```bash
-uv run agent-hub uninstall
+agent-hub uninstall
+pipx uninstall agent-hub
 ```
 
 ## Claude Code and Codex
@@ -107,7 +112,7 @@ The MCP process uses its working directory for delegated agents. Run `agent-hub 
 ## Run without a service
 
 ```bash
-uv run agent-hub
+agent-hub serve
 ```
 
 The service listens on `~/.agent-hub/run/agent-hub.sock`. It runs Uvicorn with `zttp` for HTTP parsing and `zuvloop` for the event loop. Python clients and tests use `httpx2`.
@@ -142,7 +147,7 @@ max_runtime_seconds = 900
 Project profiles under `.agent-hub/agents/` require an explicit opt-in:
 
 ```bash
-uv run agent-hub install --allow-project-profiles
+agent-hub install --allow-project-profiles
 ```
 
 Project profiles override user profiles with the same name. User and opted-in project profiles also override installed catalog profiles identified by `<owner>/<name>`. Keep-alive profiles must set a bounded `idle_timeout_seconds`.
