@@ -87,6 +87,47 @@ summary = "The profile passes the registry checks."
 
 The manifest supports the profile fields `model`, `allow_model_override`, `keep_alive`, `idle_timeout_seconds`, `tools`, `mcp_servers`, `usage_limits`, and `allow_delegation`. Declare commands, services, and provider requirements in `external_dependencies` so users see them before installation.
 
+## Publish a Pydantic AI AgentSpec
+
+```bash
+mkdir -p registry/agents/example/pydantic-reviewer/1.0.0
+cat > registry/agents/example/pydantic-reviewer/1.0.0/agent.toml <<'EOF'
+schema_version = 1
+owner = "example"
+name = "pydantic-reviewer"
+version = "1.0.0"
+description = "Reviews changes with a native Pydantic AI AgentSpec."
+keywords = ["pydantic-ai", "agent-spec", "review"]
+runtime = "pydantic-ai"
+access = "read-only"
+agent_spec = "agent-spec.yaml"
+external_dependencies = ["a configured model provider"]
+EOF
+cat > registry/agents/example/pydantic-reviewer/1.0.0/agent-spec.yaml <<'EOF'
+name: pydantic-reviewer
+model: anthropic:claude-sonnet-4-6
+instructions:
+  - Review the requested changes without editing files.
+  - Report concrete defects and missing tests.
+model_settings:
+  temperature: 0
+retries: 2
+end_strategy: exhaustive
+EOF
+cat > registry/agents/example/pydantic-reviewer/1.0.0/instructions.md <<'EOF'
+Use the available read-only workspace tools. Include file paths with every finding.
+EOF
+cat > registry/agents/example/pydantic-reviewer/1.0.0/README.md <<'EOF'
+# Pydantic reviewer
+
+Use this agent for read-only review with Pydantic AI.
+EOF
+```
+
+Set `agent_spec` to `agent-spec.yaml`, `agent-spec.yml`, or `agent-spec.json`. Agent Hub validates the file with Pydantic AI's `AgentSpec` model when it builds the registry and installs the bundle. The runtime uses `Agent.from_spec()` and merges `instructions.md` with the spec instructions.
+
+Agent Hub remains responsible for permissions. Declare workspace tools and MCP servers in `agent.toml`. Catalog AgentSpecs cannot define `capabilities`, because capabilities can add tools or network access outside the catalog permission review.
+
 ## Validate a registry
 
 ```bash

@@ -166,6 +166,15 @@ total_tokens_limit = 100000
 
 The built-in `read_file` and `list_files` tools are available to read-only profiles. `write_file` requires `shared-write` access. URL and script-based MCP servers require Pydantic AI's MCP optional dependency. You can also inject preconfigured MCP toolsets when embedding `create_app()`.
 
+Catalog bundles can include a native Pydantic AI `AgentSpec`:
+
+```toml
+runtime = "pydantic-ai"
+agent_spec = "agent-spec.yaml"
+```
+
+Agent Hub validates the spec and constructs the runtime with `Agent.from_spec()`. Tools, MCP servers, and access controls remain in `agent.toml`, so catalog review can inspect them before installation. See [Publish a Pydantic AI AgentSpec](docs/catalog.md#publish-a-pydantic-ai-agentspec) for a complete bundle.
+
 ### CodePuppy profiles
 
 Install a CodePuppy release that provides the stable `--acp` interface:
