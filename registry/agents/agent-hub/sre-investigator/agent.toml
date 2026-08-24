@@ -1,0 +1,12 @@
+schema_version = 1
+owner = "agent-hub"
+name = "sre-investigator"
+version = "1.0.0"
+description = "Correlates observability and deployment evidence to diagnose production and staging incidents without mutating systems."
+keywords = ["sre", "incident", "observability", "kubernetes", "logfire", "alerts", "read-only"]
+runtime = "pi"
+access = "shared-write"
+keep_alive = false
+max_runtime_seconds = 1800
+network_access = true
+external_dependencies = ["Pi", "configured read-only observability and infrastructure tools"]

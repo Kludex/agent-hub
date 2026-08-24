@@ -1,0 +1,13 @@
+schema_version = 1
+owner = "agent-hub"
+name = "pr-shepherd"
+version = "1.0.0"
+description = "Takes a pull request from initial review through tested follow-up changes and a clear merge-readiness decision."
+keywords = ["pull-request", "review", "ci", "github", "testing", "background"]
+runtime = "pi"
+access = "shared-write"
+keep_alive = true
+idle_timeout_seconds = 1800
+max_runtime_seconds = 3600
+network_access = true
+external_dependencies = ["Pi", "an authenticated GitHub CLI", "the repository test toolchain"]

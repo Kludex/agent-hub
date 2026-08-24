@@ -1,0 +1,12 @@
+schema_version = 1
+owner = "agent-hub"
+name = "maintainer-inbox"
+version = "1.0.0"
+description = "Builds an evidence-backed maintainer briefing from pull requests, issues, CI, security alerts, and releases."
+keywords = ["maintenance", "github", "triage", "pull-requests", "issues", "ci"]
+runtime = "pi"
+access = "shared-write"
+keep_alive = false
+max_runtime_seconds = 1800
+network_access = true
+external_dependencies = ["Pi", "an authenticated GitHub CLI"]

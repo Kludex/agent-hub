@@ -43,6 +43,7 @@ async def pi_hub(tmp_path: Path) -> AsyncIterator[PiHub]:
         profiles={
             "task": AgentProfile(name="task", allow_model_override=True),
             "sticky": AgentProfile(name="sticky", keep_alive=True, idle_timeout_seconds=60),
+            "instructed": AgentProfile(name="instructed", instructions="Follow the profile instructions."),
         },
     )
     app = create_app(
@@ -108,6 +109,18 @@ async def test_pi_runtime_streams_and_settles_on_agent_settled(pi_hub: PiHub, tm
     assert any(event["type"] == "run.tool.updated" for event in events)
     assert any(event["type"] == "run.tool.finished" for event in events)
     assert any(event["type"] == "runtime.stderr" for event in events)
+
+
+@pytest.mark.anyio
+async def test_pi_runtime_applies_profile_instructions(pi_hub: PiHub, tmp_path: Path) -> None:
+    spawned = await pi_hub.rpc(
+        "agent.spawn",
+        {"profile": "instructed", "prompt": "profile-instructions", "cwd": str(tmp_path)},
+    )
+
+    run = await pi_hub.wait(spawned["runId"])
+
+    assert run["result"] == "result:profile-instructions:Follow the profile instructions."
 
 
 @pytest.mark.anyio

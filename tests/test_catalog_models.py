@@ -12,8 +12,14 @@ def test_curated_registry_bundles_follow_the_catalog_schema() -> None:
 
     bundles = [load_bundle(path) for path in paths]
 
-    assert [bundle.manifest.identity for bundle in bundles] == ["agent-hub/implementation-planner"]
-    planner = bundles[0]
+    assert [bundle.manifest.identity for bundle in bundles] == [
+        "agent-hub/implementation-planner",
+        "agent-hub/maintainer-inbox",
+        "agent-hub/performance-investigator",
+        "agent-hub/pr-shepherd",
+        "agent-hub/sre-investigator",
+    ]
+    planner = next(bundle for bundle in bundles if bundle.manifest.name == "implementation-planner")
     assert planner.manifest.to_profile(planner.instructions).instructions == planner.instructions
     assert (
         planner.manifest.to_profile(planner.instructions, planner.path).agent_spec == planner.path / "agent-spec.yaml"

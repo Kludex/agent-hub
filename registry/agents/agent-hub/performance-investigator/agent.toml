@@ -1,0 +1,12 @@
+schema_version = 1
+owner = "agent-hub"
+name = "performance-investigator"
+version = "1.0.0"
+description = "Investigates latency, throughput, memory, benchmark regressions, and flaky performance measurements."
+keywords = ["performance", "benchmark", "memory", "profiling", "regression", "codspeed"]
+runtime = "pi"
+access = "shared-write"
+keep_alive = false
+max_runtime_seconds = 3600
+network_access = true
+external_dependencies = ["Pi", "the repository benchmark and profiling toolchain"]

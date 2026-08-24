@@ -12,10 +12,19 @@ import anyio
 from agent_hub.config import HubConfig
 
 SERVICE_NAME = "dev.agent-hub"
+SKILL_NAMES = (
+    "api-compatibility-review",
+    "docs-and-dx-editing",
+    "issue-triage",
+    "product-readiness-review",
+    "release-readiness",
+    "security-validation",
+)
 
 
 async def install(config: HubConfig) -> None:
     _install_extension()
+    _install_skills()
     if sys.platform == "darwin":
         await _install_launchd(config)
     elif sys.platform.startswith("linux"):
@@ -36,6 +45,7 @@ async def uninstall() -> None:
     else:
         raise RuntimeError(f"Agent Hub service removal is unsupported on {sys.platform}")
     _extension_path().unlink(missing_ok=True)
+    shutil.rmtree(_skills_path(), ignore_errors=True)
 
 
 def _install_extension() -> None:
@@ -46,6 +56,18 @@ def _install_extension() -> None:
         with destination.open("wb") as target:
             shutil.copyfileobj(source, target)
     destination.chmod(0o600)
+
+
+def _install_skills() -> None:
+    root = _skills_path()
+    assets = files("agent_hub").joinpath("assets", "skills")
+    for name in SKILL_NAMES:
+        destination = root / name / "SKILL.md"
+        destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with assets.joinpath(name, "SKILL.md").open("rb") as source:
+            with destination.open("wb") as target:
+                shutil.copyfileobj(source, target)
+        destination.chmod(0o600)
 
 
 async def _install_launchd(config: HubConfig) -> None:
@@ -118,6 +140,10 @@ async def _checked(command: list[str]) -> None:
 
 def _extension_path() -> Path:
     return Path.home() / ".pi" / "agent" / "extensions" / "agent-hub.js"
+
+
+def _skills_path() -> Path:
+    return Path.home() / ".agents" / "skills" / "agent-hub"
 
 
 def _launchd_path() -> Path:

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from agent_hub.config import HubConfig
-from agent_hub.service import install, uninstall
+from agent_hub.service import SKILL_NAMES, install, uninstall
 
 
 @pytest.mark.anyio
@@ -40,6 +40,10 @@ async def test_installs_and_removes_the_extension_and_user_service(
     extension = home / ".pi" / "agent" / "extensions" / "agent-hub.js"
     assert extension.stat().st_mode & 0o777 == 0o600
     assert b"registerAgentHub" in extension.read_bytes()
+    skills = home / ".agents" / "skills" / "agent-hub"
+    assert tuple(path.parent.name for path in sorted(skills.glob("*/SKILL.md"))) == SKILL_NAMES
+    assert all(path.stat().st_mode & 0o777 == 0o600 for path in skills.glob("*/SKILL.md"))
+    assert "name: issue-triage" in (skills / "issue-triage" / "SKILL.md").read_text(encoding="utf-8")
     if platform == "darwin":
         service = home / "Library" / "LaunchAgents" / "dev.agent-hub.plist"
         payload = plistlib.loads(service.read_bytes())
@@ -58,6 +62,7 @@ async def test_installs_and_removes_the_extension_and_user_service(
     await uninstall()
 
     assert not extension.exists()
+    assert not skills.exists()
     assert not service.exists()
 
 

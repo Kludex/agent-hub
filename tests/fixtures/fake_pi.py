@@ -15,6 +15,7 @@ session_directory = Path(sys.argv[sys.argv.index("--session-dir") + 1])
 session_directory.mkdir(parents=True, exist_ok=True)
 session_file = session_directory / "fake-session.jsonl"
 session_file.touch()
+system_prompt = sys.argv[sys.argv.index("--append-system-prompt") + 1] if "--append-system-prompt" in sys.argv else None
 last_text: str | None = None
 settled = threading.Event()
 
@@ -76,6 +77,8 @@ def complete_prompt(message: str) -> None:
         time.sleep(0.01)
         os.write(sys.stderr.fileno(), b"additional stderr\n")
     last_text = f"result:{message}"
+    if message == "profile-instructions":
+        last_text = f"{last_text}:{system_prompt}"
     emit({"type": "agent_end", "messages": [], "willRetry": False})
     time.sleep(0.01)
     emit({"type": "agent_settled"})

@@ -11,9 +11,9 @@ uv tool install git+https://github.com/Kludex/agent-hub.git
 agent-hub install
 ```
 
-`agent-hub install` starts the Agent Hub service and installs the bundled Pi extension. It creates a LaunchAgent on macOS or a user systemd service on Linux.
+`agent-hub install` starts the Agent Hub service and installs the bundled Pi extension and skills. It creates a LaunchAgent on macOS or a user systemd service on Linux.
 
-Restart Pi after the installation. You can then use the `task` tool to delegate work and `/hub` to inspect running agents.
+Restart Pi after the installation. You can then use the `task` tool to delegate work, `/hub` to inspect running agents, and `/skill:<name>` to invoke a bundled skill.
 
 ## Connect Claude Code
 
@@ -77,19 +77,44 @@ Set `background` to `true` when the caller should continue without waiting for t
 
 ```bash
 agent-hub catalog
-agent-hub catalog search planning
-agent-hub catalog show agent-hub/implementation-planner
-agent-hub catalog install agent-hub/implementation-planner
+agent-hub catalog search maintenance
+agent-hub catalog show agent-hub/maintainer-inbox
+agent-hub catalog install agent-hub/maintainer-inbox
 agent-hub agent list
 ```
 
 The catalog contains versioned agent profiles. Before installation, Agent Hub verifies the bundle and shows its permissions and external dependencies. Installed versions stay pinned until you update them explicitly:
 
 ```bash
-agent-hub agent update agent-hub/implementation-planner
+agent-hub agent update agent-hub/maintainer-inbox
 ```
 
 See [Agent catalog](docs/catalog.md) to configure sources, review permission changes, and publish profiles.
+
+## Agents and skills
+
+An agent is an independent worker with its own runtime, context, permissions, workspace, and lifecycle. A skill is a reusable procedure loaded into the current agent. It does not run independently.
+
+Agent Hub includes these focused catalog agents:
+
+| Agent | Purpose |
+| --- | --- |
+| `implementation-planner` | Produce an execution-ready implementation plan without modifying files. |
+| `maintainer-inbox` | Prioritize pull requests, issues, CI, security alerts, and releases. |
+| `performance-investigator` | Investigate benchmarks, memory, throughput, and performance regressions. |
+| `pr-shepherd` | Review a pull request, prepare requested fixes, and determine merge readiness. |
+| `sre-investigator` | Diagnose incidents from observability and deployment evidence without mutating systems. |
+
+`agent-hub install` also installs these skills under `~/.agents/skills/agent-hub/`:
+
+- `api-compatibility-review`
+- `docs-and-dx-editing`
+- `issue-triage`
+- `product-readiness-review`
+- `release-readiness`
+- `security-validation`
+
+See [Agents and skills](docs/agents-and-skills.md) for the complete distinction and guidance on choosing one.
 
 ## Create a Pi profile
 
@@ -260,4 +285,4 @@ agent-hub uninstall
 uv tool uninstall agent-hub
 ```
 
-The first command removes the user service and bundled Pi extension. The second removes the `agent-hub` executable.
+The first command removes the user service, bundled Pi extension, and bundled skills. The second removes the `agent-hub` executable.

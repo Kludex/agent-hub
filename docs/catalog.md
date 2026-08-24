@@ -2,13 +2,15 @@
 
 The catalog publishes versioned agent profiles. Agent Hub includes the registry in this repository as its built-in source.
 
+The catalog contains independent agents, not skills. `agent-hub install` installs the bundled skills separately under `~/.agents/skills/agent-hub/`. See [Agents and skills](agents-and-skills.md) before adding a new capability.
+
 ## Browse and install agents
 
 ```bash
 agent-hub catalog
-agent-hub catalog search planning
-agent-hub catalog show agent-hub/implementation-planner
-agent-hub catalog install agent-hub/implementation-planner
+agent-hub catalog search maintenance
+agent-hub catalog show agent-hub/maintainer-inbox
+agent-hub catalog install agent-hub/maintainer-inbox
 agent-hub agent list
 ```
 
