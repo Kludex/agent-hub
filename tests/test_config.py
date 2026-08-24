@@ -83,6 +83,7 @@ def test_project_profile_requires_opt_in_and_overrides_user_profiles(tmp_path: P
         {"name": "sticky", "keep_alive": True},
         {"name": "bad-idle", "idle_timeout_seconds": 0},
         {"name": "bad-runtime", "max_runtime_seconds": 0},
+        {"name": "bad-spec", "agent_spec": "agent-spec.yaml"},
     ],
 )
 def test_profile_lifetime_limits_are_validated(values: dict[str, object]) -> None:

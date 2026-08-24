@@ -47,6 +47,7 @@ class AgentProfile(BaseModel):
     tools: tuple[str, ...] = ()
     mcp_servers: tuple[str, ...] = ()
     network_access: bool = False
+    agent_spec: Path | None = None
     usage_limits: UsageLimitSettings = Field(default_factory=UsageLimitSettings)
     allow_delegation: bool = False
 
@@ -58,6 +59,8 @@ class AgentProfile(BaseModel):
             raise ValueError("idle_timeout_seconds must be positive")
         if self.max_runtime_seconds <= 0:
             raise ValueError("max_runtime_seconds must be positive")
+        if self.agent_spec is not None and self.runtime != "pydantic-ai":
+            raise ValueError("agent_spec requires runtime = 'pydantic-ai'")
         return self
 
 
@@ -135,7 +138,7 @@ def load_installed_profiles(data_dir: Path) -> dict[str, AgentProfile]:
     for path in sorted((data_dir / "agents").glob("*/*/*")):
         if path.is_dir():
             bundle = load_bundle(path)
-            profile = bundle.manifest.to_profile(bundle.instructions)
+            profile = bundle.manifest.to_profile(bundle.instructions, bundle.path)
             profiles[profile.name] = profile
     return profiles
 

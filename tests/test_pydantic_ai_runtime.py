@@ -39,11 +39,17 @@ class PydanticHub:
 @pytest.fixture
 async def pydantic_hub(tmp_path: Path) -> AsyncIterator[PydanticHub]:
     socket_directory = Path("/tmp") / f"ah-pai-{uuid.uuid4().hex}"
+    agent_spec = tmp_path / "agent-spec.yaml"
+    agent_spec.write_text(
+        "name: spec-agent\nmodel: plain-model\ninstructions: Answer from the AgentSpec.\nretries: 2\n",
+        encoding="utf-8",
+    )
     config = HubConfig(
         data_dir=tmp_path,
         socket_path=socket_directory / "hub.sock",
         profiles={
             "plain": AgentProfile(name="plain", runtime="pydantic-ai", model="plain-model"),
+            "spec": AgentProfile(name="spec", runtime="pydantic-ai", agent_spec=agent_spec),
             "brief": AgentProfile(
                 name="brief",
                 runtime="pydantic-ai",
@@ -129,6 +135,19 @@ async def pydantic_hub(tmp_path: Path) -> AsyncIterator[PydanticHub]:
         listener.close()
         config.socket_path.unlink(missing_ok=True)
         socket_directory.rmdir()
+
+
+@pytest.mark.anyio
+async def test_pydantic_ai_agent_spec_constructs_the_agent(pydantic_hub: PydanticHub, tmp_path: Path) -> None:
+    spawned = await pydantic_hub.rpc(
+        "agent.spawn",
+        {"profile": "spec", "prompt": "hello", "cwd": str(tmp_path)},
+    )
+
+    run = await pydantic_hub.wait(spawned["runId"])
+
+    assert run["state"] == "succeeded"
+    assert run["result"] == "Pydantic result"
 
 
 @pytest.mark.anyio

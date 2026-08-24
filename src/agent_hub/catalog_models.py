@@ -80,15 +80,16 @@ class AgentManifest(BaseModel):
     @model_validator(mode="after")
     def validate_profile(self) -> Self:
         self.to_profile("")
-        if self.agent_spec is not None and self.runtime != "pydantic-ai":
-            raise ValueError("agent_spec requires runtime = 'pydantic-ai'")
         return self
 
     @property
     def identity(self) -> str:
         return f"{self.owner}/{self.name}"
 
-    def to_profile(self, instructions: str) -> AgentProfile:
+    def to_profile(self, instructions: str, bundle_path: Path | None = None) -> AgentProfile:
+        agent_spec = None
+        if self.agent_spec is not None:
+            agent_spec = Path(self.agent_spec) if bundle_path is None else bundle_path / self.agent_spec
         return AgentProfile(
             name=self.identity,
             runtime=self.runtime,
@@ -102,6 +103,7 @@ class AgentManifest(BaseModel):
             tools=self.tools,
             mcp_servers=self.mcp_servers,
             network_access=self.network_access,
+            agent_spec=agent_spec,
             usage_limits=self.usage_limits,
             allow_delegation=self.allow_delegation,
         )

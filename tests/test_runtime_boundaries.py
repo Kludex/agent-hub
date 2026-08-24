@@ -131,6 +131,27 @@ async def test_pydantic_runtime_validates_profiles_and_non_running_actions(tmp_p
                 AgentProfile(name="missing-mcp", runtime="pydantic-ai", model="test", mcp_servers=("server.py",)),
             )
         )
+    with pytest.raises(RuntimeFailure, match="Could not load Pydantic AI AgentSpec"):
+        await runtime.start(
+            request(
+                tmp_path,
+                AgentProfile(
+                    name="missing-spec",
+                    runtime="pydantic-ai",
+                    model="test",
+                    agent_spec=tmp_path / "missing.yaml",
+                ),
+            )
+        )
+    capability_spec = tmp_path / "capability.yaml"
+    capability_spec.write_text("model: test\ncapabilities: [Thinking]\n", encoding="utf-8")
+    with pytest.raises(RuntimeFailure, match="capabilities are not supported"):
+        await runtime.start(
+            request(
+                tmp_path,
+                AgentProfile(name="capability", runtime="pydantic-ai", agent_spec=capability_spec),
+            )
+        )
 
     start_request = request(tmp_path, AgentProfile(name="plain", runtime="pydantic-ai", model="test"))
     handle = await runtime.start(start_request)

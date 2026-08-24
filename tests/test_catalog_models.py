@@ -19,6 +19,9 @@ def test_curated_registry_bundles_follow_the_catalog_schema() -> None:
         "agent-hub/task",
     ]
     assert bundles[0].manifest.to_profile(bundles[0].instructions).instructions == bundles[0].instructions
+    assert bundles[0].manifest.to_profile(bundles[0].instructions, bundles[0].path).agent_spec == (
+        bundles[0].path / "agent-spec.yaml"
+    )
     assert bundles[0].agent_spec is not None
     assert bundles[0].agent_spec.name == "pydantic-reviewer"
 

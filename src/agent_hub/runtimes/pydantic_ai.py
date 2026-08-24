@@ -6,7 +6,7 @@ from typing import Any
 
 import anyio
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
-from pydantic_ai import Agent
+from pydantic_ai import Agent, AgentSpec
 from pydantic_ai.exceptions import AgentRunError, UserError
 from pydantic_ai.messages import (
     AgentStreamEvent,
@@ -32,7 +32,7 @@ ToolFunction = Callable[..., Any]
 
 @dataclass
 class PydanticAIHandle:
-    agent: Agent[Any, str]
+    agent: Agent[Any, Any]
     event_send: MemoryObjectSendStream[RuntimeEvent]
     event_receive: MemoryObjectReceiveStream[RuntimeEvent]
     messages: list[Any] = field(default_factory=list)
@@ -66,7 +66,17 @@ class PydanticAIRuntime:
         pass
 
     async def start(self, request: StartAgentRequest) -> object:
-        model = request.model or request.profile.model
+        try:
+            agent_spec = (
+                AgentSpec.from_file(request.profile.agent_spec) if request.profile.agent_spec is not None else None
+            )
+        except (OSError, UserError, ValueError) as exc:
+            raise RuntimeFailure(f"Could not load Pydantic AI AgentSpec: {exc}") from exc
+        if agent_spec is not None and agent_spec.capabilities:
+            raise RuntimeFailure(
+                "Pydantic AI AgentSpec capabilities are not supported; configure tools and MCP servers in the profile"
+            )
+        model = request.model or request.profile.model or (agent_spec.model if agent_spec is not None else None)
         if model is None:
             raise RuntimeFailure(f"Pydantic AI profile {request.profile.name!r} must define a model")
         workspace_tools, workspace_read_only = create_workspace_tools(request.cwd, self._max_tool_output_bytes)
@@ -87,12 +97,21 @@ class PydanticAIRuntime:
             toolsets.append(registered if registered is not None else self._mcp_toolset(server))
         selected_model: Model | str = self._models.get(model, model)
         try:
-            agent: Agent[Any, str] = Agent(
-                selected_model,
-                instructions=request.profile.instructions,
-                tools=tools,
-                toolsets=toolsets,
-            )
+            if agent_spec is None:
+                agent: Agent[Any, Any] = Agent(
+                    selected_model,
+                    instructions=request.profile.instructions,
+                    tools=tools,
+                    toolsets=toolsets,
+                )
+            else:
+                agent = Agent.from_spec(
+                    agent_spec,
+                    model=selected_model,
+                    instructions=request.profile.instructions,
+                    tools=tools,
+                    toolsets=toolsets,
+                )
         except UserError as exc:
             raise RuntimeFailure(str(exc)) from exc
         usage_limits = UsageLimits(**request.profile.usage_limits.model_dump())
