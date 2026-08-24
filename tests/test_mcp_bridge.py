@@ -21,8 +21,9 @@ from tests.conftest import RunningHub
 
 def output(result: CallToolResult) -> dict[str, Any]:
     assert result.is_error is False
-    assert isinstance(result.structured_content, dict)
-    return cast(dict[str, Any], result.structured_content)
+    structured_content: object = result.structured_content
+    assert isinstance(structured_content, dict)
+    return cast(dict[str, Any], structured_content)
 
 
 @pytest.mark.anyio
@@ -102,7 +103,7 @@ async def test_stdio_bridge_delegates_and_manages_agents(hub: RunningHub, tmp_pa
 @dataclass
 class FakeContext:
     request_id: str = "request"
-    progress: list[float] = field(default_factory=list)
+    progress: list[float] = field(default_factory=list[float])
 
     async def report_progress(self, progress: float, total: float | None, message: str | None) -> None:
         self.progress.append(progress)

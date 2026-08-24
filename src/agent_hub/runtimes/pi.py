@@ -30,7 +30,7 @@ class PiHandle:
     process: Process
     event_send: MemoryObjectSendStream[RuntimeEvent]
     event_receive: MemoryObjectReceiveStream[RuntimeEvent]
-    responses: dict[str, CommandWaiter] = field(default_factory=dict)
+    responses: dict[str, CommandWaiter] = field(default_factory=dict[str, CommandWaiter])
     settled: anyio.Event = field(default_factory=anyio.Event)
     write_lock: anyio.Lock = field(default_factory=anyio.Lock)
     protocol_error: str | None = None
@@ -253,23 +253,24 @@ class PiRuntime:
 
     async def _receive(self, handle: PiHandle, raw: bytes) -> None:
         try:
-            value = json.loads(raw.decode("utf-8"))
+            value: object = json.loads(raw.decode("utf-8"))
         except UnicodeDecodeError, json.JSONDecodeError:
             await self._protocol_failure(handle, "Pi emitted malformed JSON")
             return
         if not isinstance(value, dict):
             await self._protocol_failure(handle, "Pi emitted a non-object record")
             return
-        command_id = value.get("id")
-        if value.get("type") == "response" and isinstance(command_id, str):
+        record = cast(dict[str, Any], value)
+        command_id = record.get("id")
+        if record.get("type") == "response" and isinstance(command_id, str):
             waiter = handle.responses.get(command_id)
             if waiter is not None and not waiter.ready.is_set():
-                waiter.value = value
+                waiter.value = record
                 waiter.ready.set()
             return
-        if value.get("type") == "agent_settled":
+        if record.get("type") == "agent_settled":
             handle.settled.set()
-        for event in self._normalize(value):
+        for event in self._normalize(record):
             await handle.event_send.send(event)
 
     async def _protocol_failure(self, handle: PiHandle, message: str) -> None:

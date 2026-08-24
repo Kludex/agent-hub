@@ -48,25 +48,28 @@ class HubClient:
             content=body,
             headers={"content-type": "application/x-ndjson"},
         )
+        records: list[dict[str, Any]] = []
         try:
-            records = [json.loads(line) for line in response.content.splitlines() if line]
+            for line in response.content.splitlines():
+                if line:
+                    value: object = json.loads(line)
+                    if isinstance(value, dict):
+                        records.append(cast(dict[str, Any], value))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise HubClientError("Agent Hub returned an invalid JSON-RPC response") from exc
-        record = next(
-            (value for value in records if isinstance(value, dict) and value.get("id") == request_id),
-            None,
-        )
+        record = next((value for value in records if value.get("id") == request_id), None)
         if record is None:
             raise HubClientError("Agent Hub returned no matching JSON-RPC response")
-        error = record.get("error")
-        if isinstance(error, dict):
+        error_value: object = record.get("error")
+        if isinstance(error_value, dict):
+            error = cast(dict[str, Any], error_value)
             message = error.get("message", "Agent Hub command failed")
             code = error.get("code", "unknown")
             raise HubClientError(f"{message} ({code})")
-        result = record.get("result")
-        if not isinstance(result, dict):
+        result_value: object = record.get("result")
+        if not isinstance(result_value, dict):
             raise HubClientError("Agent Hub returned an invalid JSON-RPC result")
-        return cast(dict[str, Any], result)
+        return cast(dict[str, Any], result_value)
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx2.Response:
         if self._client is None:

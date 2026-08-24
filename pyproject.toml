@@ -29,7 +29,7 @@ agent-hub = "agent_hub.cli:main"
 
 [dependency-groups]
 dev = [
-    "mypy>=1.15",
+    "pyright>=1.1.405",
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.9",
@@ -50,9 +50,11 @@ select = ["E", "F", "I", "FA", "UP", "RUF100"]
 [tool.ruff.lint.isort]
 combine-as-imports = true
 
-[tool.mypy]
-strict = true
-files = ["src", "tests"]
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+reportPrivateUsage = false
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers --cov=agent_hub --cov=tests --cov-report=term-missing --cov-fail-under=100"

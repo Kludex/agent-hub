@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -28,7 +28,7 @@ class Scheduler:
         self._writers: set[str] = set()
 
     @asynccontextmanager
-    async def slot(self, request: ScheduleRequest) -> AsyncIterator[None]:
+    async def slot(self, request: ScheduleRequest) -> AsyncGenerator[None]:
         await self.acquire(request)
         try:
             yield

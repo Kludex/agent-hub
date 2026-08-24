@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import anyio
 from acp import PROTOCOL_VERSION, Agent, RequestError, spawn_agent_process, text_block
@@ -242,7 +242,11 @@ class CodePuppyRuntime:
 
     @staticmethod
     def _error(prefix: str, error: RequestError | ConnectionError | RuntimeFailure | ValidationError) -> str:
-        detail = error.data.get("details") if isinstance(error, RequestError) and isinstance(error.data, dict) else None
+        detail: object = None
+        if isinstance(error, RequestError):
+            data_value: object = error.data
+            if isinstance(data_value, dict):
+                detail = cast(dict[str, Any], data_value).get("details")
         return f"{prefix}: {detail or error}"
 
     @staticmethod

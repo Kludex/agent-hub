@@ -24,10 +24,12 @@ async def test_replays_events_and_disconnects_a_slow_subscriber(tmp_path: Path) 
     async def receive_first() -> None:
         await received_send.send(await anext(replay))
 
+    first: EventRecord | None = None
     async with anyio.create_task_group() as task_group:
         task_group.start_soon(receive_first)
         await journal.emit("first")
         first = await received.receive()
+    assert first is not None
     await journal.emit("second")
     await journal.emit("overflow")
 
