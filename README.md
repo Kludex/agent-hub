@@ -63,15 +63,14 @@ The Pi extension transports commands and renders state. The persistent manager o
 
 ## Install
 
-Install the wheel published by the [`Kludex/agent-hub`](https://github.com/Kludex/agent-hub) release workflow:
+Install Agent Hub directly from the [`Kludex/agent-hub`](https://github.com/Kludex/agent-hub) repository:
 
 ```bash
-pipx install --python python3.14 \
-  https://github.com/Kludex/agent-hub/releases/download/v0.1.0/agent_hub-0.1.0-py3-none-any.whl
+uv tool install git+https://github.com/Kludex/agent-hub.git
 agent-hub install
 ```
 
-The release includes `SHA256SUMS` for artifact verification. `agent-hub install` installs the bundled Pi extension and starts a persistent user service. It writes a LaunchAgent on macOS or a user systemd service on Linux.
+`agent-hub install` installs the bundled Pi extension and starts a persistent user service. It writes a LaunchAgent on macOS or a user systemd service on Linux.
 
 Restart Pi after installation. The extension provides the `task` tool and the `/hub` command.
 
@@ -79,7 +78,7 @@ To remove the service and extension:
 
 ```bash
 agent-hub uninstall
-pipx uninstall agent-hub
+uv tool uninstall agent-hub
 ```
 
 ## Claude Code and Codex
