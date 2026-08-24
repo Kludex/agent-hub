@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AccessMode = Literal["read-only", "shared-write"]
-RuntimeName = Literal["pi", "pydantic-ai"]
+RuntimeName = Literal["codepuppy", "pi", "pydantic-ai"]
 
 
 class UsageLimitSettings(BaseModel):
@@ -78,6 +78,7 @@ class HubConfig(BaseSettings):
     completed_event_retention: int = 10_000
     shutdown_grace_seconds: float = 2
     process_shutdown_seconds: float = 5
+    codepuppy_executable: str = "code-puppy"
     allow_project_profiles: bool = False
     profiles: dict[str, AgentProfile] = Field(default_factory=dict)
 
@@ -97,6 +98,8 @@ class HubConfig(BaseSettings):
             raise ValueError("record and output limits must be positive; retention must not be negative")
         if self.shutdown_grace_seconds <= 0 or self.process_shutdown_seconds <= 0:
             raise ValueError("shutdown timeouts must be positive")
+        if not self.codepuppy_executable:
+            raise ValueError("codepuppy_executable must not be empty")
         if not self.profiles:
             self.profiles = bundled_profiles()
         return self

@@ -16,12 +16,12 @@
 
 ## CodePuppy runtime
 
-- [ ] Confirm that CodePuppy exposes a stable machine-readable API for prompting, streaming events, cancellation, and session restoration. Do not parse output intended for humans.
-- [ ] Add a `CodePuppyRuntime` adapter that implements `AgentRuntime` and keeps CodePuppy-specific lifecycle behavior outside the manager.
-- [ ] Normalize CodePuppy output, tool activity, usage, errors, and lifecycle changes into Agent Hub events. Report unsupported steering, follow-up, or restoration capabilities explicitly.
-- [ ] Support `runtime = "codepuppy"` in profiles, including executable discovery, model configuration, access controls, runtime limits, and workspace isolation.
-- [ ] Add protocol fixture tests and optional end-to-end tests covering completion, streaming, cancellation, crashes, malformed records, and restoration.
-- [ ] Document installation requirements, profile configuration, supported capabilities, and known limitations.
+- [x] Confirm that CodePuppy exposes a stable machine-readable API for prompting, streaming events, cancellation, and session restoration. Do not parse output intended for humans.
+- [x] Add a `CodePuppyRuntime` adapter that implements `AgentRuntime` and keeps CodePuppy-specific lifecycle behavior outside the manager.
+- [x] Normalize CodePuppy output, tool activity, usage, errors, and lifecycle changes into Agent Hub events. Report unsupported steering, follow-up, or restoration capabilities explicitly.
+- [x] Support `runtime = "codepuppy"` in profiles, including executable discovery, model configuration, access controls, runtime limits, and workspace isolation.
+- [x] Add protocol fixture tests and optional end-to-end tests covering completion, streaming, cancellation, crashes, malformed records, and restoration.
+- [x] Document installation requirements, profile configuration, supported capabilities, and known limitations.
 
 ## Distributed workers
 

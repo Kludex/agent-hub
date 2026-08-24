@@ -2,7 +2,7 @@
 
 ## Summary
 
-Agent Hub is a local service that creates, monitors, steers, and stops coding agents. It provides one control plane for Pi subprocesses and Pydantic AI agents.
+Agent Hub is a local service that creates, monitors, steers, and stops coding agents. It provides one control plane for Pi, Pydantic AI, and CodePuppy agents.
 
 The service runs under Uvicorn on a Unix domain socket. Clients send JSON-RPC 2.0 commands framed as JSON Lines. They receive live events from a separate streaming JSONL endpoint.
 
@@ -16,7 +16,7 @@ A Pi extension provides the initial client. It registers a `task` tool for deleg
 - Stream model output, tool activity, usage, status changes, and errors.
 - Let a user steer, follow up, abort, park, and revive an agent.
 - Preserve Pi sessions so parked or interrupted Pi agents can resume.
-- Support Pi and Pydantic AI through separate runtime adapters.
+- Support Pi, Pydantic AI, and CodePuppy through separate runtime adapters.
 - Keep the Pi extension thin. The service owns lifecycle and concurrency.
 - Remain local and single-user by default.
 
@@ -36,12 +36,13 @@ The first release will not provide:
 
 ### Runtime-neutral manager
 
-The manager must not encode Pi-specific or Pydantic AI-specific lifecycle behavior in its core. Each backend implements an `AgentRuntime` protocol and emits normalized events.
+The manager must not encode runtime-specific lifecycle behavior in its core. Each backend implements an `AgentRuntime` protocol and emits normalized events.
 
-The first two adapters are:
+The runtime adapters are:
 
 - `PiRuntime`: starts `pi --mode rpc` subprocesses and communicates through Pi's native JSONL RPC protocol.
 - `PydanticAIRuntime`: runs configured Pydantic AI agents inside the service process.
+- `CodePuppyRuntime`: starts `code-puppy --acp` and communicates through the official Agent Client Protocol SDK.
 
 Pi support comes first because it provides native Pi tools, extensions, session files, steering, and usage accounting. Pydantic AI support follows the same manager contract but receives only the tools explicitly registered by that runtime.
 
@@ -200,6 +201,9 @@ agent-hub/
 │       └── runtimes/
 │           ├── __init__.py
 │           ├── base.py
+│           ├── codepuppy.py
+│           ├── codepuppy_client.py
+│           ├── codepuppy_terminal.py
 │           ├── pi.py
 │           └── pydantic_ai.py
 ├── extension/
@@ -462,6 +466,14 @@ The runtime emits the same normalized lifecycle, output, tool, and usage events 
 Pydantic AI agents do not inherit Pi's tools. Coding capabilities must come from explicit manager-owned tools or configured MCP servers. Tool permissions and workspace restrictions must be enforced by the manager rather than by prompt text.
 
 The first Pydantic AI implementation may retain conversations only while the daemon is running. Durable restoration should be added only after its storage contract is explicit and tested.
+
+## CodePuppy runtime
+
+CodePuppy exposes a machine-readable ACP server through `code-puppy --acp`. Agent Hub uses the official `agent-client-protocol` SDK for initialization, session creation and loading, prompts, cancellation, and streamed session updates. It never parses CodePuppy's terminal UI output.
+
+The adapter maps assistant text, thinking, tool calls, usage, errors, and stderr into normalized Hub events. Its ACP client bounds workspace file access, mediates permissions, and supervises terminal process groups. Read-only profiles reject write and terminal requests. Shared-write and isolated profiles execute against the manager-selected workspace.
+
+CodePuppy ACP supports cancellation and durable session loading. It does not support steering or queued follow-ups during an active prompt. The profile model is sent through CodePuppy's ACP `model` configuration option, while CodePuppy remains responsible for provider credentials, tools, and MCP configuration.
 
 ## Agent profiles
 
@@ -739,6 +751,15 @@ Exit criteria: every lifecycle action can be performed without leaving Pi.
 
 Exit criteria: the same Pi `task` tool and Hub UI can operate both Pi and Pydantic AI agents without runtime-specific UI logic.
 
+### Phase 6b: CodePuppy runtime
+
+- Add the ACP-backed subprocess adapter.
+- Normalize output, thinking, tools, usage, errors, and cancellation.
+- Enforce workspace and access boundaries through the ACP client.
+- Support model selection and durable session loading.
+
+Exit criteria: profiles with `runtime = "codepuppy"` use the same scheduling, lifecycle, isolation, and client interfaces as other runtimes.
+
 ### Phase 7: Isolation and packaging
 
 - Add git worktree isolation.
@@ -763,6 +784,7 @@ The MVP is complete when:
 - The manager enforces concurrency and recursion limits.
 - Disconnecting the parent Pi session does not terminate background agents.
 - A parked Pi agent can resume from its session file.
+- CodePuppy profiles use ACP for streaming, cancellation, permissions, and session loading.
 - Public behavior has complete test coverage.
 
 ## Deferred decisions
@@ -773,6 +795,5 @@ These decisions should be made after the Pi-backed MVP is usable:
 - Whether the Hub should become a standalone TUI or browser application.
 - Whether events need a PostgreSQL backend for longer retention.
 - Whether remote workers are worth the authentication and security cost.
-- Whether Agent Hub should expose an optional MCP facade for third-party clients.
 
-MCP may be added as a convenience interface for tool discovery and simple operations. It should not replace the JSONL lifecycle stream.
+The MCP stdio bridge is a convenience interface for tool discovery and simple operations. It does not replace the JSONL lifecycle stream.

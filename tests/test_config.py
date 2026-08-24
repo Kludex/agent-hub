@@ -63,6 +63,7 @@ def test_profile_lifetime_limits_are_validated(values: dict[str, object]) -> Non
         {"completed_event_retention": -1},
         {"shutdown_grace_seconds": 0},
         {"process_shutdown_seconds": 0},
+        {"codepuppy_executable": ""},
     ],
 )
 def test_hub_limits_are_validated(values: dict[str, object], tmp_path: Path) -> None:

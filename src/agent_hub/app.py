@@ -16,7 +16,7 @@ from agent_hub.events import EventJournal
 from agent_hub.manager import AgentManager
 from agent_hub.persistence import Repository
 from agent_hub.protocol import RPCError, decode_records, encode_record, failure, notification, success
-from agent_hub.runtimes import AgentRuntime, PiRuntime, PydanticAIRuntime
+from agent_hub.runtimes import AgentRuntime, CodePuppyRuntime, PiRuntime, PydanticAIRuntime
 from agent_hub.security import redact_text
 
 
@@ -35,6 +35,13 @@ def create_app(
         database_path = cast(Any, hub_config.database_path)
         repository = Repository(database_path)
         configured_runtimes: dict[str, AgentRuntime] = runtimes or {
+            "codepuppy": CodePuppyRuntime(
+                hub_config.codepuppy_executable,
+                socket_path=hub_config.socket_path,
+                process_shutdown_seconds=hub_config.process_shutdown_seconds,
+                max_record_bytes=hub_config.max_record_bytes,
+                max_output_bytes=hub_config.max_output_bytes,
+            ),
             "pi": PiRuntime(
                 shutdown_grace_seconds=hub_config.shutdown_grace_seconds,
                 process_shutdown_seconds=hub_config.process_shutdown_seconds,

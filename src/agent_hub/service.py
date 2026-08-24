@@ -103,6 +103,7 @@ def _service_arguments(config: HubConfig) -> list[str]:
             raise RuntimeError("Socket path is not configured")
         arguments.extend(["--socket", str(config.socket_path)])
     arguments.extend(["--global-concurrency", str(config.global_concurrency)])
+    arguments.extend(["--codepuppy-executable", config.codepuppy_executable])
     if config.allow_project_profiles:
         arguments.append("--allow-project-profiles")
     return arguments

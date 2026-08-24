@@ -31,6 +31,7 @@ async def test_installs_and_removes_the_extension_and_user_service(
     config = HubConfig(
         data_dir=home / "agent hub's data",
         socket_path=home / "custom.sock",
+        codepuppy_executable="/opt/codepuppy/bin/code-puppy",
         allow_project_profiles=True,
     )
 
@@ -46,11 +47,13 @@ async def test_installs_and_removes_the_extension_and_user_service(
         assert payload["ProgramArguments"][1] == "serve"
         assert "--socket" in payload["ProgramArguments"]
         assert "--allow-project-profiles" in payload["ProgramArguments"]
+        assert "/opt/codepuppy/bin/code-puppy" in payload["ProgramArguments"]
     else:
         service = home / ".config" / "systemd" / "user" / "agent-hub.service"
         contents = service.read_text(encoding="utf-8")
         assert "Restart=on-failure" in contents
         assert "'\\''" in contents
+        assert "/opt/codepuppy/bin/code-puppy" in contents
 
     await uninstall()
 

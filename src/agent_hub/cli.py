@@ -24,6 +24,7 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     parser.add_argument("--data-dir", type=Path, default=Path.home() / ".agent-hub")
     parser.add_argument("--socket", type=Path)
     parser.add_argument("--global-concurrency", type=int, default=4)
+    parser.add_argument("--codepuppy-executable", default="code-puppy")
     parser.add_argument("--allow-project-profiles", action="store_true")
     values = parser.parse_args(arguments)
     logfire.configure(send_to_logfire=False)
@@ -31,6 +32,7 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
         data_dir=values.data_dir,
         socket_path=values.socket,
         global_concurrency=values.global_concurrency,
+        codepuppy_executable=values.codepuppy_executable,
         allow_project_profiles=values.allow_project_profiles,
     )
     config.profiles = load_profiles(config, Path.cwd())

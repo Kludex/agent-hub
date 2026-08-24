@@ -1,6 +1,6 @@
 # Agent Hub
 
-Agent Hub is a local control plane for coding agents. It schedules Pi and Pydantic AI runs, persists lifecycle events, and exposes JSON-RPC over a user-owned Unix socket.
+Agent Hub is a local control plane for coding agents. It schedules Pi, Pydantic AI, and CodePuppy runs, persists lifecycle events, and exposes JSON-RPC over a user-owned Unix socket.
 
 ## Architecture
 
@@ -25,8 +25,10 @@ flowchart LR
     subgraph Runtimes
         PiRuntime["Pi runtime adapter"]
         PydanticRuntime["Pydantic AI runtime adapter"]
+        CodePuppyRuntime["CodePuppy ACP adapter"]
         PiProcess["Pi RPC subprocess"]
         PydanticAgent["Pydantic AI agent"]
+        CodePuppyProcess["CodePuppy ACP subprocess"]
     end
 
     subgraph Workspaces
@@ -45,12 +47,16 @@ flowchart LR
     Journal <--> Database
     Scheduler --> PiRuntime
     Scheduler --> PydanticRuntime
+    Scheduler --> CodePuppyRuntime
     PiRuntime --> PiProcess
     PydanticRuntime --> PydanticAgent
+    CodePuppyRuntime --> CodePuppyProcess
     PiProcess --> Shared
     PiProcess --> Isolated
     PydanticAgent --> Shared
     PydanticAgent --> Isolated
+    CodePuppyProcess --> Shared
+    CodePuppyProcess --> Isolated
 ```
 
 The Pi extension transports commands and renders state. The persistent manager owns scheduling, recovery, event replay, and runtime processes, so agents continue when an individual Pi session closes.
@@ -145,6 +151,38 @@ total_tokens_limit = 100000
 ```
 
 The built-in `read_file` and `list_files` tools are available to read-only profiles. `write_file` requires `shared-write` access. URL and script-based MCP servers require Pydantic AI's MCP optional dependency. You can also inject preconfigured MCP toolsets when embedding `create_app()`.
+
+### CodePuppy profiles
+
+Install a CodePuppy release that provides the stable `--acp` interface:
+
+```bash
+uv tool install "code-puppy>=0.0.774"
+code-puppy --help
+```
+
+Configure the model provider through CodePuppy. Agent Hub does not copy or manage CodePuppy credentials.
+
+```toml
+name = "codepuppy-coder"
+runtime = "codepuppy"
+model = "claude-sonnet-4-6"
+access = "shared-write"
+keep_alive = true
+idle_timeout_seconds = 300
+max_runtime_seconds = 900
+instructions = "Implement the requested change and run the relevant tests."
+```
+
+Agent Hub starts `code-puppy --acp` and uses the official Agent Client Protocol SDK. It maps text, thinking, tool activity, usage, errors, cancellation, and session loading into the common Agent Hub lifecycle. `read-only` profiles reject write and terminal permissions. Isolated runs use the detached worktree as CodePuppy's workspace.
+
+CodePuppy does not support steering or queued follow-ups during an active ACP prompt. Send another turn after the current run completes. CodePuppy owns its tool and MCP configuration, so the profile's `tools` and `mcp_servers` fields do not change a CodePuppy agent.
+
+The daemon discovers `code-puppy` from its service environment by default. Pass an absolute executable when you install the service if needed:
+
+```bash
+agent-hub install --codepuppy-executable "$HOME/.local/bin/code-puppy"
+```
 
 ## Workspace isolation
 
