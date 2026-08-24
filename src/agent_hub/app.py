@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any
 
 import logfire
 from starlette.applications import Starlette
@@ -32,7 +32,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncGenerator[LifespanState]:
-        database_path = cast(Any, hub_config.database_path)
+        database_path = hub_config.database_path
+        assert database_path is not None
         repository = Repository(database_path)
         configured_runtimes: dict[str, AgentRuntime] = runtimes or {
             "codepuppy": CodePuppyRuntime(

@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, cast
+from typing import Any
 
+from pydantic import ValidationError
 from typing_extensions import TypedDict
+
+from agent_hub.json_data import JSONValue, parse_json
+
+type WireValue = str | int | float | bool | None | list[WireValue] | tuple[WireValue, ...] | dict[str, WireValue]
 
 JSONRPC_VERSION = "2.0"
 _CAMEL_BOUNDARY = re.compile(r"_([a-z])")
@@ -14,7 +19,7 @@ class RPCRequest(TypedDict):
     jsonrpc: str
     id: str | int | None
     method: str
-    params: dict[str, Any]
+    params: dict[str, JSONValue]
 
 
 class RPCError(Exception):
@@ -39,8 +44,8 @@ def decode_records(body: bytes, max_record_bytes: int) -> list[RPCRequest]:
         if len(raw) > max_record_bytes:
             raise RPCError(-32600, "JSONL record exceeds the configured limit")
         try:
-            value: object = json.loads(raw.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            value = parse_json(raw)
+        except ValidationError as exc:
             raise RPCError(-32700, "Parse error") from exc
         records.append(validate_request(value))
     if not records:
@@ -48,20 +53,18 @@ def decode_records(body: bytes, max_record_bytes: int) -> list[RPCRequest]:
     return records
 
 
-def validate_request(value: object) -> RPCRequest:
+def validate_request(value: JSONValue) -> RPCRequest:
     if not isinstance(value, dict):
         raise RPCError(-32600, "Request must be an object")
-    request = cast(dict[str, Any], value)
-    method: object = request.get("method")
-    if request.get("jsonrpc") != JSONRPC_VERSION or not isinstance(method, str):
+    method = value.get("method")
+    if value.get("jsonrpc") != JSONRPC_VERSION or not isinstance(method, str):
         raise RPCError(-32600, "Invalid JSON-RPC request")
-    request_id: object = request.get("id")
+    request_id = value.get("id")
     if request_id is not None and not isinstance(request_id, (str, int)):
         raise RPCError(-32600, "Request id must be a string, integer, or null")
-    params_value: object = request.get("params", {})
-    if not isinstance(params_value, dict):
+    params = value.get("params", {})
+    if not isinstance(params, dict):
         raise RPCError(-32602, "Params must be an object")
-    params = cast(dict[str, Any], params_value)
     return {"jsonrpc": JSONRPC_VERSION, "id": request_id, "method": method, "params": params}
 
 
@@ -84,14 +87,12 @@ def encode_record(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
 
 
-def to_wire(value: object) -> Any:
+def to_wire(value: WireValue) -> JSONValue:
     if isinstance(value, dict):
-        mapping = cast(dict[object, object], value)
         return {
             _CAMEL_BOUNDARY.sub(lambda match: match.group(1).upper(), str(key)): to_wire(item)
-            for key, item in mapping.items()
+            for key, item in value.items()
         }
     if isinstance(value, (list, tuple)):
-        items = cast(list[object] | tuple[object, ...], value)
-        return [to_wire(item) for item in items]
+        return [to_wire(item) for item in value]
     return value

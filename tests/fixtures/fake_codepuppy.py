@@ -89,6 +89,8 @@ class FixtureAgent:
     ) -> SetSessionConfigOptionResponse:
         if value == "invalid-model":
             raise RequestError.invalid_params({"details": "invalid fixture model"})
+        if value == "invalid-model-error":
+            raise RequestError(-32602, "invalid fixture model data", "invalid data")
         (self.directories[session_id] / ".fixture-codepuppy-model").write_text(str(value), encoding="utf-8")
         return SetSessionConfigOptionResponse(config_options=[])
 

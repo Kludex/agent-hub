@@ -92,16 +92,14 @@ async def test_pydantic_runtime_can_steer_follow_and_abort_an_active_run(tmp_pat
         except RuntimeFailure as exc:
             await send.send(str(exc))
 
-    error: str | None = None
     async with anyio.create_task_group() as task_group:
         task_group.start_soon(prompt)
         await anyio.sleep(0.01)
         await runtime.steer(handle, "steer")
         await runtime.follow_up(handle, "follow")
         await runtime.abort(handle)
-        error = await receive.receive()
+        assert await receive.receive() == "Pydantic AI run was aborted"
 
-    assert error == "Pydantic AI run was aborted"
     await runtime.stop(handle)
     await runtime.close()
     await send.aclose()

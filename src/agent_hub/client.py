@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import uuid
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import httpx2
+from pydantic import ValidationError
+
+from agent_hub.json_data import JSONValue, parse_json
 
 
 class HubClientError(RuntimeError):
@@ -33,7 +36,7 @@ class HubClient:
         if response.json() != {"status": "ok"}:
             raise HubClientError("Agent Hub returned an invalid health response")
 
-    async def rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def rpc(self, method: str, params: dict[str, Any] | None = None) -> dict[str, JSONValue]:
         request_id = uuid.uuid4().hex
         body = (
             json.dumps(
@@ -48,28 +51,27 @@ class HubClient:
             content=body,
             headers={"content-type": "application/x-ndjson"},
         )
-        records: list[dict[str, Any]] = []
+        records: list[dict[str, JSONValue]] = []
         try:
             for line in response.content.splitlines():
                 if line:
-                    value: object = json.loads(line)
+                    value = parse_json(line)
                     if isinstance(value, dict):
-                        records.append(cast(dict[str, Any], value))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                        records.append(value)
+        except ValidationError as exc:
             raise HubClientError("Agent Hub returned an invalid JSON-RPC response") from exc
         record = next((value for value in records if value.get("id") == request_id), None)
         if record is None:
             raise HubClientError("Agent Hub returned no matching JSON-RPC response")
-        error_value: object = record.get("error")
-        if isinstance(error_value, dict):
-            error = cast(dict[str, Any], error_value)
+        error = record.get("error")
+        if isinstance(error, dict):
             message = error.get("message", "Agent Hub command failed")
             code = error.get("code", "unknown")
             raise HubClientError(f"{message} ({code})")
-        result_value: object = record.get("result")
-        if not isinstance(result_value, dict):
+        result = record.get("result")
+        if not isinstance(result, dict):
             raise HubClientError("Agent Hub returned an invalid JSON-RPC result")
-        return cast(dict[str, Any], result_value)
+        return result
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx2.Response:
         if self._client is None:

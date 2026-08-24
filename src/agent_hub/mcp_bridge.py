@@ -5,7 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
 from mcp.server.mcpserver import Context, MCPServer
@@ -75,10 +75,9 @@ class MCPBridge:
                         },
                     )
             raise
-        run_value: object = waited.get("run")
-        if not isinstance(run_value, dict):
+        run = waited.get("run")
+        if not isinstance(run, dict):
             raise HubClientError("Agent Hub returned an invalid run")
-        run = cast(dict[str, Any], run_value)
         await ctx.report_progress(1, 1, f"Agent Hub run {run_id} {run.get('state', 'completed')}")
         if run.get("state") != "succeeded":
             raise HubClientError(str(run.get("error") or f"Delegated run {run.get('state', 'failed')}"))

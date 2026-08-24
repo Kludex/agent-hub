@@ -7,14 +7,14 @@ from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import anyio
 from acp import PROTOCOL_VERSION, Agent, RequestError, spawn_agent_process, text_block
 from acp.schema import Implementation
 from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from agent_hub.models import AgentRecord
 from agent_hub.runtimes.base import RuntimeEvent, RuntimeFailure, RuntimeResult, StartAgentRequest, StartRunRequest
@@ -24,6 +24,10 @@ if TYPE_CHECKING:
     from asyncio.subprocess import Process
 
     from acp.core import ClientSideConnection
+
+
+class _RequestErrorData(BaseModel):
+    details: str | None = None
 
 
 @dataclass
@@ -242,11 +246,12 @@ class CodePuppyRuntime:
 
     @staticmethod
     def _error(prefix: str, error: RequestError | ConnectionError | RuntimeFailure | ValidationError) -> str:
-        detail: object = None
+        detail = None
         if isinstance(error, RequestError):
-            data_value: object = error.data
-            if isinstance(data_value, dict):
-                detail = cast(dict[str, Any], data_value).get("details")
+            try:
+                detail = _RequestErrorData.model_validate(error.data).details
+            except ValidationError:
+                pass
         return f"{prefix}: {detail or error}"
 
     @staticmethod

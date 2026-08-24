@@ -5,19 +5,22 @@ import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import anyio
 import httpx2
 import pytest
 import uvicorn
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+from pydantic import TypeAdapter
 
 from agent_hub.app import create_app
 from agent_hub.cli import bind_socket
 from agent_hub.config import AgentProfile, HubConfig
 from agent_hub.models import AgentRecord
 from agent_hub.runtimes.base import RuntimeEvent, RuntimeFailure, RuntimeResult, StartAgentRequest, StartRunRequest
+
+JSON_OBJECT_ADAPTER = TypeAdapter(dict[str, Any])
 
 
 @dataclass
@@ -149,10 +152,10 @@ async def rpc_request(
         content=json.dumps({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params or {}}) + "\n",
         headers={"content-type": "application/x-ndjson"},
     )
-    record = cast(dict[str, Any], response.json())
+    record = JSON_OBJECT_ADAPTER.validate_python(response.json())
     if "error" in record:
         return record
-    return cast(dict[str, Any], record["result"])
+    return JSON_OBJECT_ADAPTER.validate_python(record["result"])
 
 
 @dataclass

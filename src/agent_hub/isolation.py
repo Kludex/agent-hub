@@ -3,15 +3,27 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal
 
 import anyio
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from agent_hub.models import AgentRecord
 
 
 class IsolationFailure(Exception):
     """A git worktree operation could not be completed safely."""
+
+
+class _IsolationRestoration(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    kind: Literal["git-worktree"]
+    source_root: Path = Field(alias="sourceRoot")
+    worktree_path: Path = Field(alias="worktreePath")
+    relative_cwd: Path = Field(alias="relativeCwd")
+    base_commit: str = Field(alias="baseCommit")
+    patch_path: Path | None = Field(default=None, alias="patchPath")
 
 
 @dataclass(frozen=True)
@@ -99,26 +111,24 @@ class IsolationManager:
 
     @staticmethod
     def _from_agent(agent: AgentRecord) -> Worktree:
-        raw_value: object = agent.restoration.get("isolation")
-        if not isinstance(raw_value, dict) or cast(dict[str, Any], raw_value).get("kind") != "git-worktree":
-            raise IsolationFailure(f"Agent {agent.id} has no isolation worktree")
-        raw = cast(dict[str, Any], raw_value)
         try:
-            source_root = Path(str(raw["sourceRoot"]))
-            path = Path(str(raw["worktreePath"]))
-            relative_cwd = Path(str(raw["relativeCwd"]))
-            base_commit = str(raw["baseCommit"])
-        except KeyError as exc:  # pragma: no cover - metadata is written atomically by prepare()
-            raise IsolationFailure(f"Agent {agent.id} has incomplete isolation metadata") from exc
-        return Worktree(source_root, path, path / relative_cwd, base_commit)
+            restoration = _IsolationRestoration.model_validate(agent.restoration.get("isolation"))
+        except ValidationError as exc:
+            raise IsolationFailure(f"Agent {agent.id} has no isolation worktree") from exc
+        return Worktree(
+            restoration.source_root,
+            restoration.worktree_path,
+            restoration.worktree_path / restoration.relative_cwd,
+            restoration.base_commit,
+        )
 
     @staticmethod
     def _optional_patch_path(agent: AgentRecord) -> Path | None:
-        raw_value: object = agent.restoration.get("isolation")
-        if not isinstance(raw_value, dict) or not isinstance(cast(dict[str, Any], raw_value).get("patchPath"), str):
+        try:
+            restoration = _IsolationRestoration.model_validate(agent.restoration.get("isolation"))
+        except ValidationError:
             return None
-        raw = cast(dict[str, Any], raw_value)
-        return Path(raw["patchPath"])
+        return restoration.patch_path
 
     @classmethod
     def _patch_path(cls, agent: AgentRecord) -> Path:
