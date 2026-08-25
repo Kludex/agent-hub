@@ -11,7 +11,7 @@ type TaskParameters = {
   agent: string;
   prompt: string;
   background?: boolean;
-  model?: string;
+  model?: string | null;
   access?: string;
   isolated?: boolean;
   maxRuntimeSeconds?: number;
@@ -23,7 +23,21 @@ type TaskResult = {
   usage?: { totalTokens: number; cost: { total: number } };
 };
 
+type Renderable = {
+  render: (width: number) => string[];
+};
+
+type TestTheme = {
+  fg: (_color: string, text: string) => string;
+  bold: (text: string) => string;
+};
+
 type RegisteredTool = {
+  parameters: {
+    properties: {
+      model: { anyOf: Array<{ type: string }> };
+    };
+  };
   execute: (
     toolCallId: string,
     parameters: TaskParameters,
@@ -31,6 +45,13 @@ type RegisteredTool = {
     onUpdate: ((result: TaskResult) => void) | undefined,
     context: { cwd: string; sessionManager: { getSessionId: () => string } },
   ) => Promise<TaskResult>;
+  renderCall: (parameters: TaskParameters, theme: TestTheme, context: object) => Renderable;
+  renderResult: (
+    result: TaskResult,
+    options: { expanded: boolean; isPartial: boolean },
+    theme: TestTheme,
+    context: { isError: boolean },
+  ) => Renderable;
 };
 
 class FakeHubClient extends HubClient {
@@ -59,6 +80,22 @@ class FakeHubClient extends HubClient {
     this.waited = true;
     onEvent({
       sequence: 5,
+      timestamp: "now",
+      type: "run.state.changed",
+      agentId: "agt_test",
+      runId: "run_test",
+      data: { state: "running" },
+    });
+    onEvent({
+      sequence: 6,
+      timestamp: "now",
+      type: "run.tool.started",
+      agentId: "agt_test",
+      runId: "run_test",
+      data: { toolName: "bash" },
+    });
+    onEvent({
+      sequence: 7,
       timestamp: "now",
       type: "run.output.delta",
       agentId: "agt_test",
@@ -98,6 +135,27 @@ const context = {
   sessionManager: { getSessionId: () => "root-session" },
 };
 
+const theme: TestTheme = {
+  fg: (_color, text) => text,
+  bold: (text) => text,
+};
+
+function render(component: Renderable): string {
+  return component
+    .render(120)
+    .map((line) => line.trimEnd())
+    .join("\n");
+}
+
+test("allows null to select the profile's default model", () => {
+  const tool = registered(new FakeHubClient());
+
+  assert.deepEqual(
+    tool.parameters.properties.model.anyOf.map((schema) => schema.type),
+    ["string", "null"],
+  );
+});
+
 test("returns blocking output, progress, and nested usage", async () => {
   const client = new FakeHubClient();
   const tool = registered(client);
@@ -114,10 +172,28 @@ test("returns blocking output, progress, and nested usage", async () => {
   assert.equal(result.content[0]?.text, "done");
   assert.equal(result.usage?.totalTokens, 6);
   assert.equal(result.usage?.cost.total, 0.02);
-  assert.equal(updates[0]?.content[0]?.text, "working");
+  assert.equal(updates.at(-1)?.content[0]?.text, "reviewer: running - bash\nworking");
   assert.equal(client.parameters?.cwd, "/repo");
   assert.equal(client.parameters?.rootSessionId, "root-session");
   assert.equal(client.parameters?.isolated, true);
+
+  const call = tool.renderCall({ agent: "reviewer", prompt: "review", isolated: true }, theme, {});
+  assert.match(render(call), /task reviewer \[isolated\]\n  review/);
+
+  const partial = tool.renderResult(updates.at(-1)!, { expanded: false, isPartial: true }, theme, {
+    isError: false,
+  });
+  const partialText = render(partial);
+  assert.match(partialText, /Running · 0s · 1 tool call/);
+  assert.match(partialText, /Current: bash/);
+  assert.match(partialText, /Tools: bash/);
+  assert.match(partialText, /Latest: working/);
+  assert.doesNotMatch(partialText, /\[bash\]/);
+
+  const completed = tool.renderResult(result, { expanded: false, isPartial: false }, theme, {
+    isError: false,
+  });
+  assert.match(render(completed), /✓ Completed · 0s · 1 tool call\ndone/);
 });
 
 test("returns a background handle without waiting", async () => {
