@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.84.2",
+    "@earendil-works/pi-tui": "^0.84.3",
     "@types/node": "^24.0.0",
     "esbuild": "^0.25.0",
     "oxfmt": "^0.32.0",
@@ -19,7 +20,7 @@
     "extensions": ["./src/index.ts"]
   },
   "scripts": {
-    "bundle": "esbuild src/index.ts --bundle --format=esm --platform=node --outfile=../src/agent_hub/assets/agent-hub.js",
+    "bundle": "esbuild src/index.ts --bundle --format=esm --platform=node --external:@earendil-works/pi-coding-agent --external:@earendil-works/pi-tui --outfile=../src/agent_hub/assets/agent-hub.js",
     "check": "tsc --noEmit && oxlint src tests && oxfmt --check src tests",
     "format": "oxfmt --write src tests",
     "test": "node --import tsx --test tests/*.test.ts"

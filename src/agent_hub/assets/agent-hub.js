@@ -406,6 +406,10 @@ function transcript(detail) {
   return lines.join("\n");
 }
 
+// src/task-tool.ts
+import { getMarkdownTheme, keyHint } from "@earendil-works/pi-coding-agent";
+import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
+
 // node_modules/typebox/build/system/memory/memory.mjs
 var memory_exports = {};
 __export(memory_exports, {
@@ -4835,7 +4839,11 @@ function registerTaskTool(pi, client) {
       agent: typebox_exports.String({ description: "Reusable Agent Hub profile name" }),
       prompt: typebox_exports.String({ description: "Complete task for the delegated agent" }),
       background: typebox_exports.Optional(typebox_exports.Boolean({ default: false })),
-      model: typebox_exports.Optional(typebox_exports.String()),
+      model: typebox_exports.Optional(
+        typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()], {
+          description: "Model override, or null to use the profile default"
+        })
+      ),
       access: typebox_exports.Optional(typebox_exports.String({ description: "read-only or shared-write" })),
       isolated: typebox_exports.Optional(typebox_exports.Boolean({ default: false })),
       maxRuntimeSeconds: typebox_exports.Optional(typebox_exports.Number({ minimum: 1 }))
@@ -4860,6 +4868,18 @@ function registerTaskTool(pi, client) {
         },
         signal
       );
+      const progress = {
+        output: "",
+        details: {
+          ...spawned,
+          profile: params.agent,
+          state: params.background ? "background" : "starting",
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+          toolCalls: [],
+          background: params.background ?? false
+        }
+      };
       if (params.background) {
         return {
           content: [
@@ -4868,9 +4888,15 @@ function registerTaskTool(pi, client) {
               text: `Started background agent ${spawned.agentId} with run ${spawned.runId}.`
             }
           ],
-          details: { ...spawned, background: true }
+          details: taskDetails(progress.details)
         };
       }
+      onUpdate?.(progressResult(progress));
+      const heartbeat = setInterval(() => {
+        progress.details.updatedAt = Date.now();
+        onUpdate?.(progressResult(progress));
+      }, 1e3);
+      heartbeat.unref();
       const abort = () => {
         void client.rpc("agent.abort", {
           agentId: spawned.agentId,
@@ -4878,50 +4904,190 @@ function registerTaskTool(pi, client) {
         });
       };
       signal?.addEventListener("abort", abort, { once: true });
-      let output = "";
       try {
         const run = await client.waitForRun(
           spawned.runId,
           snapshot.latestSequence,
           (event) => {
-            output = updateProgress(event, output);
-            onUpdate?.({
-              content: [{ type: "text", text: output.slice(-4e3) }],
-              details: { ...spawned, event: event.type }
-            });
+            updateProgress(event, progress);
+            onUpdate?.(progressResult(progress));
           },
           signal
         );
         if (run.state !== "succeeded") {
           throw new Error(run.error ?? `Delegated run ${run.state}`);
         }
-        return result(run, spawned);
+        progress.details.state = run.state;
+        progress.details.currentTool = void 0;
+        progress.details.updatedAt = Date.now();
+        return result(run, progress.details);
       } finally {
+        clearInterval(heartbeat);
         signal?.removeEventListener("abort", abort);
       }
+    },
+    renderCall(args, theme, _context) {
+      let text = theme.fg("toolTitle", theme.bold("task "));
+      text += theme.fg("accent", args.agent);
+      const modes = [
+        args.background ? "background" : void 0,
+        args.isolated ? "isolated" : void 0,
+        args.access
+      ].filter((value) => typeof value === "string" && value.length > 0);
+      if (modes.length > 0) {
+        text += theme.fg("muted", ` [${modes.join(", ")}]`);
+      }
+      text += `
+  ${theme.fg("dim", preview(args.prompt, 120))}`;
+      return new Text(text, 0, 0);
+    },
+    renderResult(toolResult, { expanded, isPartial }, theme, context) {
+      const details = taskResultDetails(toolResult.details);
+      const content = toolResult.content[0];
+      const output = content?.type === "text" ? content.text.trim() : "";
+      if (!details) {
+        return new Text(
+          theme.fg(context.isError ? "error" : "toolOutput", output || "No output"),
+          0,
+          0
+        );
+      }
+      const duration = formatDuration(details.updatedAt - details.startedAt);
+      const toolCount = details.toolCalls.reduce((total, item) => total + item.count, 0);
+      const activity = `${duration} \xB7 ${toolCount} ${toolCount === 1 ? "tool call" : "tool calls"}`;
+      if (isPartial) {
+        const status2 = details.state === "starting" ? "Starting" : details.state === "queued" ? "Queued" : "Running";
+        let text2 = `${theme.fg("warning", "\u25CF")} ${theme.fg("toolTitle", theme.bold(status2))}`;
+        text2 += theme.fg("dim", ` \xB7 ${activity}`);
+        if (details.currentTool) {
+          text2 += `
+  ${theme.fg("muted", "Current: ")}${theme.fg("accent", details.currentTool)}`;
+        }
+        if (details.toolCalls.length > 0) {
+          text2 += `
+  ${theme.fg("muted", "Tools: ")}${theme.fg("dim", formatTools(details.toolCalls))}`;
+        }
+        if (details.latestText) {
+          text2 += `
+  ${theme.fg("muted", "Latest: ")}${theme.fg("dim", details.latestText)}`;
+        }
+        return new Text(text2, 0, 0);
+      }
+      if (details.background) {
+        return new Text(
+          `${theme.fg("accent", "\u2192")} ${theme.fg("toolTitle", theme.bold("Started in background"))}`,
+          0,
+          0
+        );
+      }
+      const failed = context.isError || details.state !== "succeeded";
+      const icon = theme.fg(failed ? "error" : "success", failed ? "\u2717" : "\u2713");
+      const status = failed ? "Failed" : "Completed";
+      const header = `${icon} ${theme.fg("toolTitle", theme.bold(status))}${theme.fg("dim", ` \xB7 ${activity}`)}`;
+      if (expanded && output) {
+        const container = new Container();
+        container.addChild(new Text(header, 0, 0));
+        if (details.toolCalls.length > 0) {
+          container.addChild(
+            new Text(theme.fg("dim", `Tools: ${formatTools(details.toolCalls)}`), 0, 0)
+          );
+        }
+        container.addChild(new Spacer(1));
+        container.addChild(new Markdown(output, 0, 0, getMarkdownTheme()));
+        return container;
+      }
+      let text = header;
+      if (output) {
+        const lines = output.split("\n");
+        const visible = lines.slice(0, 6);
+        text += `
+${theme.fg("toolOutput", visible.join("\n"))}`;
+        if (lines.length > visible.length) {
+          text += `
+${theme.fg("muted", keyHint("app.tools.expand", "to expand"))}`;
+        }
+      }
+      return new Text(text, 0, 0);
     }
   });
 }
-function updateProgress(event, previous) {
+function updateProgress(event, progress) {
+  progress.details.updatedAt = Date.now();
   if (event.type === "run.output.delta" && typeof event.data.text === "string") {
-    return previous + event.data.text;
+    progress.output = (progress.output + event.data.text).slice(-4e3);
+    const lines = progress.output.split("\n").map((line) => line.trim()).filter(Boolean);
+    const latest = lines.at(-1);
+    progress.details.latestText = latest ? preview(latest, 160) : void 0;
+  } else if (event.type === "run.tool.started") {
+    const name = typeof event.data.toolName === "string" ? event.data.toolName : "tool";
+    const activity = progress.details.toolCalls.find((item) => item.name === name);
+    if (activity) {
+      activity.count += 1;
+    } else {
+      progress.details.toolCalls.push({ name, count: 1 });
+    }
+    progress.details.currentTool = name;
+  } else if (event.type === "run.tool.finished") {
+    progress.details.currentTool = void 0;
+  } else if (event.type === "run.state.changed" && typeof event.data.state === "string") {
+    progress.details.state = event.data.state;
+  } else if (event.type === "run.error" && typeof event.data.message === "string") {
+    progress.details.latestText = preview(event.data.message, 160);
   }
-  if (event.type === "run.tool.started") {
-    return `${previous}
-[${String(event.data.toolName ?? "tool")}]`;
-  }
-  if (event.type === "run.state.changed") {
-    return `${previous}
-Run ${String(event.data.state)}.`;
-  }
-  return previous;
 }
-function result(run, ids) {
+function progressResult(progress) {
+  return {
+    content: [{ type: "text", text: progressText(progress.details) }],
+    details: taskDetails(progress.details)
+  };
+}
+function progressText(details) {
+  let text = `${details.profile}: ${details.state}`;
+  if (details.currentTool) {
+    text += ` - ${details.currentTool}`;
+  }
+  if (details.latestText) {
+    text += `
+${details.latestText}`;
+  }
+  return text;
+}
+function result(run, details) {
   return {
     content: [{ type: "text", text: run.result ?? "" }],
-    details: { ...ids, state: run.state },
+    details: taskDetails(details),
     usage: normalizeUsage(run.usage)
   };
+}
+function taskDetails(details) {
+  return {
+    ...details,
+    toolCalls: details.toolCalls.map((item) => ({ ...item }))
+  };
+}
+function taskResultDetails(value) {
+  if (typeof value !== "object" || value === null) {
+    return void 0;
+  }
+  const details = value;
+  if (typeof details.agentId !== "string" || typeof details.runId !== "string" || typeof details.profile !== "string" || typeof details.state !== "string" || typeof details.startedAt !== "number" || typeof details.updatedAt !== "number" || !Array.isArray(details.toolCalls)) {
+    return void 0;
+  }
+  return details;
+}
+function formatTools(tools) {
+  return tools.map((item) => `${item.name}${item.count > 1 ? ` \xD7${item.count}` : ""}`).join(" \xB7 ");
+}
+function formatDuration(milliseconds) {
+  const seconds = Math.max(0, Math.round(milliseconds / 1e3));
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+function preview(value, limit) {
+  const compact = value.replace(/\s+/g, " ").trim();
+  return compact.length > limit ? `${compact.slice(0, limit - 3)}...` : compact;
 }
 function normalizeUsage(raw) {
   const tokens = record(raw.tokens);
