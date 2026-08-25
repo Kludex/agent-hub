@@ -15,6 +15,18 @@ agent-hub install
 
 Restart Pi after the installation. You can then use the `task` tool to delegate work, `/hub` to inspect running agents, and `/skill:<name>` to invoke a bundled skill.
 
+## Update
+
+```bash
+agent-hub update
+```
+
+The command installs the new package in a staging environment. It validates the dependencies and bundled assets before it stops the service. It then backs up SQLite, promotes the staged package, updates the Pi extension and skills, and restarts the service.
+
+The update succeeds only after `/health` responds successfully. If a step fails, Agent Hub restores the previous package, database, extension, and skills. It then restarts the previous service and verifies `/health` again.
+
+Database backups remain in `~/.agent-hub/backups/` after a successful update.
+
 ## Connect Claude Code
 
 Create `.mcp.json` in your project:

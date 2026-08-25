@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-from agent_hub.service import SKILL_NAMES
+from agent_hub.assets import SKILL_NAMES
 
 
 def test_bundled_skills_follow_the_agent_skills_format() -> None:

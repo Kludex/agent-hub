@@ -4,27 +4,18 @@ import os
 import plistlib
 import shutil
 import sys
-from importlib.resources import files
 from pathlib import Path
 
 import anyio
 
+from agent_hub.assets import extension_path, install_bundled_assets, load_bundled_assets, skills_path
 from agent_hub.config import HubConfig
 
 SERVICE_NAME = "dev.agent-hub"
-SKILL_NAMES = (
-    "api-compatibility-review",
-    "docs-and-dx-editing",
-    "issue-triage",
-    "product-readiness-review",
-    "release-readiness",
-    "security-validation",
-)
 
 
 async def install(config: HubConfig) -> None:
-    _install_extension()
-    _install_skills()
+    install_bundled_assets(load_bundled_assets())
     if sys.platform == "darwin":
         await _install_launchd(config)
     elif sys.platform.startswith("linux"):
@@ -44,30 +35,38 @@ async def uninstall() -> None:
         await _checked(["systemctl", "--user", "daemon-reload"])
     else:
         raise RuntimeError(f"Agent Hub service removal is unsupported on {sys.platform}")
-    _extension_path().unlink(missing_ok=True)
-    shutil.rmtree(_skills_path(), ignore_errors=True)
+    extension_path().unlink(missing_ok=True)
+    shutil.rmtree(skills_path(), ignore_errors=True)
 
 
-def _install_extension() -> None:
-    destination = _extension_path()
-    destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    asset = files("agent_hub").joinpath("assets/agent-hub.js")
-    with asset.open("rb") as source:
-        with destination.open("wb") as target:
-            shutil.copyfileobj(source, target)
-    destination.chmod(0o600)
+async def stop_service(*, check: bool = True) -> None:
+    if sys.platform == "darwin":
+        command = ["launchctl", "bootout", f"gui/{os.getuid()}/{SERVICE_NAME}"]
+    elif sys.platform.startswith("linux"):
+        command = ["systemctl", "--user", "stop", "agent-hub.service"]
+    else:
+        raise RuntimeError(f"Agent Hub service management is unsupported on {sys.platform}")
+    if check:
+        await _checked(command)
+    else:
+        await anyio.run_process(command, check=False)
 
 
-def _install_skills() -> None:
-    root = _skills_path()
-    assets = files("agent_hub").joinpath("assets", "skills")
-    for name in SKILL_NAMES:
-        destination = root / name / "SKILL.md"
-        destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        with assets.joinpath(name, "SKILL.md").open("rb") as source:
-            with destination.open("wb") as target:
-                shutil.copyfileobj(source, target)
-        destination.chmod(0o600)
+async def start_service() -> None:
+    if sys.platform == "darwin":
+        await _checked(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(_launchd_path())])
+    elif sys.platform.startswith("linux"):
+        await _checked(["systemctl", "--user", "start", "agent-hub.service"])
+    else:
+        raise RuntimeError(f"Agent Hub service management is unsupported on {sys.platform}")
+
+
+def service_path() -> Path:
+    if sys.platform == "darwin":
+        return _launchd_path()
+    if sys.platform.startswith("linux"):
+        return _systemd_path()
+    raise RuntimeError(f"Agent Hub service management is unsupported on {sys.platform}")
 
 
 async def _install_launchd(config: HubConfig) -> None:
@@ -136,14 +135,6 @@ async def _checked(command: list[str]) -> None:
     if result.returncode != 0:
         message = result.stderr.decode("utf-8", errors="replace").strip()
         raise RuntimeError(message or f"Command failed: {' '.join(command)}")
-
-
-def _extension_path() -> Path:
-    return Path.home() / ".pi" / "agent" / "extensions" / "agent-hub.js"
-
-
-def _skills_path() -> Path:
-    return Path.home() / ".agents" / "skills" / "agent-hub"
 
 
 def _launchd_path() -> Path:
