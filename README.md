@@ -9,6 +9,7 @@ Agent Hub runs agents in a persistent local service. Your agents keep running wh
 ```bash
 uv tool install git+https://github.com/Kludex/agent-hub.git
 agent-hub install
+agent-hub check
 ```
 
 `agent-hub install` starts the Agent Hub service and installs the bundled Pi extension and skills. It creates a LaunchAgent on macOS or a user systemd service on Linux.
@@ -19,6 +20,7 @@ Restart Pi after the installation. You can then use the `task` tool to delegate 
 
 ```bash
 agent-hub update
+agent-hub check
 ```
 
 The command installs the new package in a staging environment. It validates the dependencies and bundled assets before it stops the service. It then backs up SQLite, promotes the staged package, updates the Pi extension and skills, and restarts the service.
@@ -77,13 +79,32 @@ Pass a profile name and a complete prompt to the `task` tool:
   "agent": "reviewer",
   "prompt": "Review the current changes. Report concrete defects and missing tests.",
   "background": false,
+  "model": null,
   "isolated": false
 }
 ```
 
-Agent Hub includes the `task`, `scout`, and `reviewer` profiles. You can install more profiles from the catalog or create your own.
+Agent Hub includes the `task`, `scout`, and `reviewer` profiles. The `task` profile allows 30 minutes for implementation and verification. The read-only `scout` and `reviewer` profiles allow 15 minutes. You can install more profiles from the catalog or create your own.
 
 Set `background` to `true` when the caller should continue without waiting for the result. Use `run_get` or `run_wait` to inspect the run later.
+
+Omit `model` or pass `null` to use the profile's model. An override must be supported by the profile's runtime. Pi provider identifiers such as `github-copilot/...` and `openai-codex/...` are not Pydantic AI model identifiers.
+
+Omit `maxRuntimeSeconds` to use the profile's runtime limit. Passing a value can only shorten that limit. Use background mode for long work rather than a short deadline. Split work that cannot fit the profile's limit.
+
+## Check profile configuration
+
+```bash
+agent-hub check
+```
+
+Run this after you install profiles or change dependencies, models, or credentials. The command checks every available profile in the running service's environment. It exits with status `1` if a profile fails validation. It does not start runs or contact model providers.
+
+For Pydantic AI profiles, the check constructs the agent to validate its model, provider dependencies, required configuration, and tools. Pi and CodePuppy profiles check that their executables are available. A successful check does not verify remote authentication, model access, or task completion.
+
+Agent Hub includes the Anthropic and OpenAI SDKs. Other Pydantic AI providers need their optional dependencies installed in the same environment as Agent Hub. The service also needs the provider's API key; exporting it in your terminal does not change an already-running service.
+
+Invalid Pydantic AI configuration is rejected before Agent Hub creates a run. Correct the configuration instead of retrying the same request. Restart the service after changing its dependencies or environment, once active runs have finished.
 
 ## Install an agent from the catalog
 
@@ -262,6 +283,16 @@ agent-hub serve
 The server listens on `~/.agent-hub/run/agent-hub.sock`. It runs Uvicorn with `zttp` for HTTP parsing and `zuvloop` for the event loop. Python clients and tests use `httpx2`.
 
 Use this command when you want to manage the process yourself. The regular installation is persistent and starts with your user session.
+
+### Pi record limits
+
+```bash
+AGENT_HUB_PI_MAX_RECORD_BYTES=2097152 agent-hub serve
+```
+
+Pi's `agent_end` event includes the run's accumulated messages. Agent Hub allows 2 MiB per Pi record so a collection of small tool responses can finish without exceeding the transport limit. You can change this limit independently of the 1 MiB API request limit and the 50 KiB result limit.
+
+Keep a finite limit. Measure an oversized record before increasing it; a larger limit permits more memory per concurrent agent. When you use the installed service, set the variable in its environment and restart after active runs finish.
 
 ## Architecture
 

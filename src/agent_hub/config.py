@@ -78,6 +78,7 @@ class HubConfig(BaseSettings):
     recursion_limit: int = 3
     subscriber_queue_size: int = 256
     max_record_bytes: int = 1024 * 1024
+    pi_max_record_bytes: int = Field(default=2 * 1024 * 1024, gt=0)
     max_output_bytes: int = 50 * 1024
     completed_event_retention: int = 10_000
     shutdown_grace_seconds: float = 2
@@ -111,7 +112,7 @@ class HubConfig(BaseSettings):
 
 def bundled_profiles() -> dict[str, AgentProfile]:
     return {
-        "task": AgentProfile(name="task", allow_model_override=True),
+        "task": AgentProfile(name="task", allow_model_override=True, max_runtime_seconds=1800),
         "scout": AgentProfile(name="scout", access="read-only", allow_model_override=True),
         "reviewer": AgentProfile(name="reviewer", access="read-only", allow_model_override=True),
     }

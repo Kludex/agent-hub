@@ -19,7 +19,7 @@ from agent_hub.lifecycle_commands import apply, discard, park, patch, revive, st
 from agent_hub.models import TERMINAL_RUN_STATES, AgentRecord, RunRecord
 from agent_hub.persistence import Repository
 from agent_hub.protocol import RPCError
-from agent_hub.query_commands import get_agent, get_run, list_agents, snapshot, wait_run
+from agent_hub.query_commands import check_profiles, get_agent, get_run, list_agents, snapshot, wait_run
 from agent_hub.registry import BackgroundTask, LiveAgent, RuntimeRegistry, start_background
 from agent_hub.runtimes.base import AgentRuntime, RuntimeFailure, RuntimeResult, StartAgentRequest, StartRunRequest
 from agent_hub.scheduler import Scheduler, ScheduleRequest
@@ -68,6 +68,7 @@ class AgentManager:
     async def dispatch(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         handlers: dict[str, Handler] = {
             "hub.snapshot": snapshot,
+            "hub.check": check_profiles,
             "agent.spawn": spawn,
             "agent.list": list_agents,
             "agent.get": get_agent,

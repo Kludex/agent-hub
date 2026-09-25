@@ -64,6 +64,10 @@ class CodePuppyRuntime:
         self._max_output_bytes = max_output_bytes
         self._task_group: TaskGroup | None = None
 
+    def validate(self, request: StartAgentRequest) -> None:
+        if shutil.which(self._executable) is None:
+            raise RuntimeFailure(f"CodePuppy executable not found: {self._executable}")
+
     async def open(self) -> None:
         if self._task_group is not None:
             raise RuntimeError("CodePuppy runtime is already open")
@@ -146,8 +150,7 @@ class CodePuppyRuntime:
         return await self._start(request, session_id)
 
     async def _start(self, request: StartAgentRequest, session_id: str | None = None) -> CodePuppyHandle:
-        if shutil.which(self._executable) is None:
-            raise RuntimeFailure(f"CodePuppy executable not found: {self._executable}")
+        self.validate(request)
         if self._task_group is None:
             raise RuntimeError("CodePuppy runtime is not open")
         request.session_directory.mkdir(mode=0o700, parents=True, exist_ok=True)

@@ -33,9 +33,13 @@ type TestTheme = {
 };
 
 type RegisteredTool = {
+  description: string;
+  promptGuidelines: string[];
   parameters: {
     properties: {
-      model: { anyOf: Array<{ type: string }> };
+      model: { description: string; anyOf: Array<{ type: string }> };
+      background: { description: string };
+      maxRuntimeSeconds: { description: string };
     };
   };
   execute: (
@@ -147,13 +151,43 @@ function render(component: Renderable): string {
     .join("\n");
 }
 
-test("allows null to select the profile's default model", () => {
+test("guides task calls toward profile defaults and realistic deadlines", () => {
   const tool = registered(new FakeHubClient());
+  const guidelines = tool.promptGuidelines.join("\n");
+  const { model, background, maxRuntimeSeconds } = tool.parameters.properties;
+
+  assert.match(tool.description, /Prefer profile defaults/);
+  assert.ok(tool.promptGuidelines.every((guideline) => guideline.includes("task")));
+  assert.match(guidelines, /omit model or pass null/);
+  assert.match(guidelines, /not Pydantic AI model IDs/);
+  assert.match(guidelines, /do not guess replacements after provider errors/);
+  assert.match(guidelines, /Do not use arbitrary 100-300s caps/);
+  assert.match(guidelines, /startup, tool work, and the final response/);
+  assert.match(guidelines, /background=true for long work instead of shortening/);
+  assert.match(guidelines, /Split work that cannot fit the cap/);
+  assert.match(model.description, /profile's runtime and installed providers/);
+  assert.match(background.description, /without waiting/);
+  assert.match(maxRuntimeSeconds.description, /Omit to use the profile default/);
+  assert.match(maxRuntimeSeconds.description, /cannot extend its maximum/);
+});
+
+test("allows null to select the profile's default model", async () => {
+  const client = new FakeHubClient();
+  const tool = registered(client);
 
   assert.deepEqual(
     tool.parameters.properties.model.anyOf.map((schema) => schema.type),
     ["string", "null"],
   );
+  await tool.execute(
+    "call_defaults",
+    { agent: "reviewer", prompt: "review", model: null },
+    new AbortController().signal,
+    undefined,
+    context,
+  );
+  assert.equal(client.parameters?.model, null);
+  assert.equal(client.parameters?.maxRuntimeSeconds, undefined);
 });
 
 test("returns blocking output, progress, and nested usage", async () => {
@@ -176,6 +210,8 @@ test("returns blocking output, progress, and nested usage", async () => {
   assert.equal(client.parameters?.cwd, "/repo");
   assert.equal(client.parameters?.rootSessionId, "root-session");
   assert.equal(client.parameters?.isolated, true);
+  assert.equal(client.parameters?.model, undefined);
+  assert.equal(client.parameters?.maxRuntimeSeconds, undefined);
 
   const call = tool.renderCall({ agent: "reviewer", prompt: "review", isolated: true }, theme, {});
   assert.match(render(call), /task reviewer \[isolated\]\n  review/);
@@ -211,4 +247,6 @@ test("returns a background handle without waiting", async () => {
   assert.match(result.content[0]?.text ?? "", /agt_test/);
   assert.equal(result.details.background, true);
   assert.equal(client.waited, false);
+  assert.equal(client.parameters?.model, undefined);
+  assert.equal(client.parameters?.maxRuntimeSeconds, undefined);
 });

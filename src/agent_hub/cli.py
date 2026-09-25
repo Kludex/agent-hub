@@ -7,6 +7,7 @@ import socket
 import sys
 from collections.abc import Generator, Sequence
 from pathlib import Path
+from typing import cast
 
 import anyio
 import httpx2
@@ -18,9 +19,11 @@ from agent_hub.app import create_app
 from agent_hub.catalog import CatalogReader, load_catalog_sources
 from agent_hub.catalog_commands import CatalogService, execute_catalog_command
 from agent_hub.catalog_sources import CatalogSourceStore, execute_catalog_source_command
+from agent_hub.client import HubClient
 from agent_hub.config import HubConfig, load_profiles
 from agent_hub.installed_agents import InstalledAgentService, execute_installed_agent_command
 from agent_hub.mcp_bridge import serve_mcp
+from agent_hub.query_commands import ProfileCheck
 from agent_hub.service import install, uninstall
 from agent_hub.update import DEFAULT_UPDATE_SOURCE, update
 
@@ -30,7 +33,7 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("serve", "install", "update", "uninstall", "mcp", "catalog", "agent"),
+        choices=("serve", "install", "update", "uninstall", "mcp", "catalog", "agent", "check"),
         default="serve",
     )
     parser.add_argument("operands", nargs="*")
@@ -54,7 +57,9 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
     )
     config.profiles = load_profiles(config, Path.cwd())
     backend_options = {"loop_factory": zuvloop.new_event_loop}
-    if values.command == "install":
+    if values.command == "check":
+        sys.exit(anyio.run(check, config, backend_options=backend_options))
+    elif values.command == "install":
         anyio.run(install, config, backend_options=backend_options)
     elif values.command == "update":
         result = anyio.run(
@@ -93,6 +98,18 @@ def main(arguments: Sequence[str] | None = None) -> None:  # pragma: no cover - 
         sys.stdout.write(f"{output}\n")
     else:
         anyio.run(serve, config, backend_options=backend_options)
+
+
+async def check(config: HubConfig) -> int:
+    assert config.socket_path is not None
+    async with HubClient(config.socket_path) as client:
+        result = await client.rpc("hub.check", {"cwd": str(Path.cwd())})
+    failed = False
+    for profile in cast(list[ProfileCheck], result["profiles"]):
+        error = profile["error"]
+        failed |= error is not None
+        sys.stdout.write(f"{profile['profile']}: {error or 'ok'}\n")
+    return int(failed)
 
 
 async def run_installed_agents(

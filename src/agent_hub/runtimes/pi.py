@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shutil
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,9 +52,11 @@ class PiRuntime:
         shutdown_grace_seconds: float = 2,
         process_shutdown_seconds: float = 5,
         socket_path: Path | None = None,
-        max_record_bytes: int = 1024 * 1024,
+        max_record_bytes: int = 2 * 1024 * 1024,
         max_stderr_bytes: int = 64 * 1024,
     ) -> None:
+        if max_record_bytes < 1:
+            raise ValueError("max_record_bytes must be positive")
         self._executable = executable
         self._shutdown_grace_seconds = shutdown_grace_seconds
         self._process_shutdown_seconds = process_shutdown_seconds
@@ -61,6 +64,10 @@ class PiRuntime:
         self._max_record_bytes = max_record_bytes
         self._max_stderr_bytes = max_stderr_bytes
         self._task_group: TaskGroup | None = None
+
+    def validate(self, request: StartAgentRequest) -> None:
+        if shutil.which(self._executable) is None:
+            raise RuntimeFailure(f"Pi executable not found: {self._executable}")
 
     async def open(self) -> None:
         if self._task_group is not None:

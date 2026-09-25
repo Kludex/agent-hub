@@ -37,10 +37,18 @@ def request(tmp_path: Path, profile: AgentProfile) -> StartAgentRequest:
     return StartAgentRequest("agt_test", profile, tmp_path, tmp_path / "sessions")
 
 
+@pytest.mark.parametrize("limit", [0, -1])
+def test_pi_runtime_requires_a_positive_record_limit(limit: int) -> None:
+    with pytest.raises(ValueError, match="max_record_bytes must be positive"):
+        PiRuntime(max_record_bytes=limit)
+
+
 @pytest.mark.anyio
 async def test_pi_runtime_reports_startup_and_lifecycle_misuse(tmp_path: Path) -> None:
     missing = PiRuntime(str(tmp_path / "missing"))
     await missing.open()
+    with pytest.raises(RuntimeFailure, match="Pi executable not found"):
+        missing.validate(request(tmp_path, AgentProfile(name="pi")))
     with pytest.raises(RuntimeFailure, match="Could not start Pi"):
         await missing.start(request(tmp_path, AgentProfile(name="pi")))
     with pytest.raises(RuntimeError, match="already open"):

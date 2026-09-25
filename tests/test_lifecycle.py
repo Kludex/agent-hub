@@ -276,6 +276,19 @@ async def test_validation_errors_are_structured(hub: RunningHub, tmp_path: Path)
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("invalid", [{"model": "override"}, {"maxRuntimeSeconds": 0}])
+async def test_rejected_prompt_does_not_create_a_run(hub: RunningHub, tmp_path: Path, invalid: dict[str, Any]) -> None:
+    spawned = await hub.rpc("agent.spawn", {"profile": "sticky", "prompt": "hello", "cwd": str(tmp_path)})
+    await wait_for_run(hub, spawned["runId"])
+    before = await hub.rpc("agent.get", {"agentId": spawned["agentId"]})
+
+    response = await hub.rpc("agent.prompt", {"agentId": spawned["agentId"], "prompt": "again", **invalid})
+
+    assert response["error"]["code"] == -32602
+    assert await hub.rpc("agent.get", {"agentId": spawned["agentId"]}) == before
+
+
+@pytest.mark.anyio
 async def test_daemon_shutdown_closes_idle_runtimes(hub: RunningHub, tmp_path: Path) -> None:
     spawned = await hub.rpc("agent.spawn", {"profile": "sticky", "prompt": "idle-shutdown", "cwd": str(tmp_path)})
 
@@ -319,6 +332,8 @@ async def test_command_parameters_are_validated(hub: RunningHub, tmp_path: Path)
     for method, params in invalid_calls:
         response = await hub.rpc(method, params)
         assert "error" in response
+
+    assert await hub.rpc("hub.snapshot") == {"agents": [], "activeRuns": [], "latestSequence": 0}
 
     completed = await hub.rpc("agent.spawn", {"prompt": "done", "cwd": str(tmp_path)})
     await wait_for_run(hub, completed["runId"])

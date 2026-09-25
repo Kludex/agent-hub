@@ -3,12 +3,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import anyio
+from typing_extensions import TypedDict
 
+from agent_hub.config import load_profiles
 from agent_hub.models import TERMINAL_RUN_STATES
 from agent_hub.protocol import RPCError
+from agent_hub.runtimes.base import RuntimeFailure, StartAgentRequest
+from agent_hub.security import redact_text
 
 if TYPE_CHECKING:
     from agent_hub.manager import AgentManager
+
+
+class ProfileCheck(TypedDict):
+    profile: str
+    runtime: str
+    error: str | None
 
 
 async def snapshot(manager: AgentManager, params: dict[str, Any]) -> dict[str, Any]:
@@ -37,6 +47,26 @@ async def snapshot(manager: AgentManager, params: dict[str, Any]) -> dict[str, A
         "activeRuns": [run.as_dict() for run in runs],
         "latestSequence": await manager.repository.latest_sequence(),
     }
+
+
+async def check_profiles(manager: AgentManager, params: dict[str, Any]) -> dict[str, Any]:
+    cwd = manager._working_directory(params.get("cwd"))
+    results: list[ProfileCheck] = []
+    for name, profile in load_profiles(manager.config, cwd).items():
+        error = None
+        try:
+            runtime = manager.runtimes.get(profile.runtime)
+            if runtime is None:
+                raise RuntimeFailure(f"Agent runtime not available: {profile.runtime}")
+            runtime.validate(
+                StartAgentRequest(
+                    "check", profile, cwd, manager.config.data_dir / "sessions" / "check", access=profile.access
+                )
+            )
+        except RuntimeFailure as exc:
+            error = redact_text(str(exc))
+        results.append({"profile": name, "runtime": profile.runtime, "error": error})
+    return {"profiles": results}
 
 
 async def list_agents(manager: AgentManager, params: dict[str, Any]) -> dict[str, Any]:

@@ -42,6 +42,9 @@ class FakeRuntime:
         self.maximum_running = 0
         self.fail_restore = False
 
+    def validate(self, request: StartAgentRequest) -> None:
+        pass
+
     async def open(self) -> None:
         pass
 

@@ -47,7 +47,7 @@ def create_app(
                 shutdown_grace_seconds=hub_config.shutdown_grace_seconds,
                 process_shutdown_seconds=hub_config.process_shutdown_seconds,
                 socket_path=hub_config.socket_path,
-                max_record_bytes=hub_config.max_record_bytes,
+                max_record_bytes=hub_config.pi_max_record_bytes,
                 max_stderr_bytes=hub_config.max_output_bytes,
             ),
             "pydantic-ai": PydanticAIRuntime(max_tool_output_bytes=hub_config.max_output_bytes),

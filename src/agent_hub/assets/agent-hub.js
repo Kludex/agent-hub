@@ -4830,23 +4830,36 @@ function registerTaskTool(pi, client) {
   pi.registerTool({
     name: "task",
     label: "Task",
-    description: "Delegate a task to an Agent Hub profile. Results are limited to 50KB.",
+    description: "Delegate a task to an Agent Hub profile. Prefer profile defaults for model and runtime; use background for long work. Results are limited to 50KB.",
     promptSnippet: "Delegate focused coding, exploration, or review work to an Agent Hub profile",
     promptGuidelines: [
-      "Use task when independent repository work can run concurrently or benefit from a specialized agent profile."
+      "Use task when independent repository work can run concurrently or benefit from a specialized agent profile.",
+      "For task, prefer profile defaults: omit model or pass null. Only override with a model supported by the profile's runtime and installed providers. Pi aliases such as github-copilot/... and openai-codex/... are not Pydantic AI model IDs; do not guess replacements after provider errors.",
+      "For task, omit maxRuntimeSeconds unless the user requires a deadline or a measured, narrowly scoped check fits it. Do not use arbitrary 100-300s caps for reviews, research, implementation, or tests. Allow time for startup, tool work, and the final response.",
+      "Use task with background=true for long work instead of shortening its deadline. Background mode does not extend the profile's runtime cap, and maxRuntimeSeconds can only lower it. Split work that cannot fit the cap into smaller tasks."
     ],
     parameters: typebox_exports.Object({
       agent: typebox_exports.String({ description: "Reusable Agent Hub profile name" }),
       prompt: typebox_exports.String({ description: "Complete task for the delegated agent" }),
-      background: typebox_exports.Optional(typebox_exports.Boolean({ default: false })),
+      background: typebox_exports.Optional(
+        typebox_exports.Boolean({
+          default: false,
+          description: "Return a handle without waiting. Use for long work, not a shorter deadline."
+        })
+      ),
       model: typebox_exports.Optional(
         typebox_exports.Union([typebox_exports.String(), typebox_exports.Null()], {
-          description: "Model override, or null to use the profile default"
+          description: "Omit or pass null to use the profile default (preferred). Overrides must match the profile's runtime and installed providers, not the parent Pi model."
         })
       ),
       access: typebox_exports.Optional(typebox_exports.String({ description: "read-only or shared-write" })),
       isolated: typebox_exports.Optional(typebox_exports.Boolean({ default: false })),
-      maxRuntimeSeconds: typebox_exports.Optional(typebox_exports.Number({ minimum: 1 }))
+      maxRuntimeSeconds: typebox_exports.Optional(
+        typebox_exports.Number({
+          minimum: 1,
+          description: "Optional lower runtime cap in seconds, not a wait timeout. Omit to use the profile default; cannot extend its maximum. Avoid arbitrary short caps; use background for long work."
+        })
+      )
     }),
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       await client.ensureAvailable(signal);

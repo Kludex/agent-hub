@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -48,7 +49,7 @@ async def pydantic_hub(tmp_path: Path) -> AsyncIterator[PydanticHub]:
         data_dir=tmp_path,
         socket_path=socket_directory / "hub.sock",
         profiles={
-            "plain": AgentProfile(name="plain", runtime="pydantic-ai", model="plain-model"),
+            "plain": AgentProfile(name="plain", runtime="pydantic-ai", model="plain-model", allow_model_override=True),
             "spec": AgentProfile(name="spec", runtime="pydantic-ai", agent_spec=agent_spec),
             "brief": AgentProfile(
                 name="brief",
@@ -101,6 +102,7 @@ async def pydantic_hub(tmp_path: Path) -> AsyncIterator[PydanticHub]:
         tools={"echo": echo},
         models={
             "plain-model": TestModel(custom_output_text="Pydantic result"),
+            "anthropic:claude-sonnet-4-6": TestModel(call_tools=[], custom_output_text="Planner ready"),
             "tool-model": TestModel(call_tools=["echo"]),
             "write-model": TestModel(call_tools=["write_file"]),
         },
@@ -135,6 +137,31 @@ async def pydantic_hub(tmp_path: Path) -> AsyncIterator[PydanticHub]:
         listener.close()
         config.socket_path.unlink(missing_ok=True)
         socket_directory.rmdir()
+
+
+@pytest.mark.anyio
+async def test_installed_planner_uses_its_default_model(pydantic_hub: PydanticHub, tmp_path: Path) -> None:
+    shutil.copytree(
+        Path("registry/agents/agent-hub/implementation-planner"),
+        tmp_path / "agents" / "agent-hub" / "implementation-planner" / "1.0.0",
+    )
+    result = await pydantic_hub.rpc("hub.check", {"cwd": str(tmp_path)})
+    planner = next(item for item in result["profiles"] if item["profile"] == "agent-hub/implementation-planner")
+    assert planner["error"] is None
+
+    spawned = await pydantic_hub.rpc(
+        "agent.spawn",
+        {
+            "profile": "agent-hub/implementation-planner",
+            "prompt": "Plan a small change",
+            "cwd": str(tmp_path),
+            "model": None,
+        },
+    )
+    run = await pydantic_hub.wait(spawned["runId"])
+
+    assert run["state"] == "succeeded", run["error"]
+    assert run["result"] == "Planner ready"
 
 
 @pytest.mark.anyio
@@ -255,15 +282,14 @@ async def test_pydantic_ai_enforces_read_only_tool_permissions(
     pydantic_hub: PydanticHub,
     tmp_path: Path,
 ) -> None:
-    spawned = await pydantic_hub.rpc(
+    response = await pydantic_hub.rpc(
         "agent.spawn",
         {"profile": "read-only-tools", "prompt": "write", "cwd": str(tmp_path)},
     )
 
-    run = await pydantic_hub.wait(spawned["runId"])
-
-    assert run["state"] == "failed"
-    assert "write-capable" in run["error"]
+    assert response["error"]["code"] == -32602
+    assert "write-capable" in response["error"]["message"]
+    assert (await pydantic_hub.rpc("agent.list"))["agents"] == []
 
 
 @pytest.mark.anyio
@@ -278,6 +304,47 @@ async def test_pydantic_ai_uses_configured_mcp_toolsets(pydantic_hub: PydanticHu
 
     assert run["state"] == "succeeded"
     assert any(event["type"] == "run.tool.started" for event in detail["events"])
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("model", "error"),
+    [
+        ("github-copilot:gpt-6-astra", "Unknown model"),
+        ("github-copilot/gpt-6-astra", "Unknown model"),
+        ("openai-codex:gpt-6-astra", "Unknown model"),
+        ("groq:llama-3.3-70b-versatile", "groq"),
+        ("anthropic:claude-haiku-4-5", "ANTHROPIC_API_KEY"),
+        ("openai:gpt-4o", "OPENAI_API_KEY"),
+    ],
+)
+async def test_invalid_provider_setup_is_rejected_before_creating_a_run(
+    pydantic_hub: PydanticHub,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    model: str,
+    error: str,
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    response = await pydantic_hub.rpc(
+        "agent.spawn", {"profile": "plain", "prompt": "hello", "cwd": str(tmp_path), "model": model}
+    )
+
+    assert response["error"]["code"] == -32602
+    assert error in response["error"]["message"]
+    assert await pydantic_hub.rpc("hub.snapshot") == {"agents": [], "activeRuns": [], "latestSequence": 0}
+
+
+@pytest.mark.anyio
+async def test_profile_checks_do_not_start_runs(pydantic_hub: PydanticHub, tmp_path: Path) -> None:
+    result = await pydantic_hub.rpc("hub.check", {"cwd": str(tmp_path)})
+    errors = {profile["profile"]: profile["error"] for profile in result["profiles"]}
+
+    assert errors["plain"] is None
+    assert errors["spec"] is None
+    assert "write-capable" in errors["read-only-tools"]
+    assert await pydantic_hub.rpc("hub.snapshot") == {"agents": [], "activeRuns": [], "latestSequence": 0}
 
 
 @pytest.mark.anyio

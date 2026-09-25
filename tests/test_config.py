@@ -10,13 +10,20 @@ from agent_hub.config import AgentProfile, HubConfig, UsageLimitSettings, load_p
 def test_hub_config_loads_environment_with_pydantic_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AGENT_HUB_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("AGENT_HUB_GLOBAL_CONCURRENCY", "7")
+    monkeypatch.setenv("AGENT_HUB_PI_MAX_RECORD_BYTES", str(3 * 1024 * 1024))
 
     config = HubConfig()
 
     assert config.data_dir == tmp_path
     assert config.socket_path == tmp_path / "run" / "agent-hub.sock"
     assert config.global_concurrency == 7
+    assert config.pi_max_record_bytes == 3 * 1024 * 1024
+    assert config.max_record_bytes == 1024 * 1024
+    assert config.max_output_bytes == 50 * 1024
     assert set(config.profiles) == {"task", "scout", "reviewer"}
+    assert config.profiles["task"].max_runtime_seconds == 1800
+    assert config.profiles["scout"].max_runtime_seconds == 900
+    assert config.profiles["reviewer"].max_runtime_seconds == 900
 
 
 def test_installed_profiles_load_before_user_and_opted_in_project_overrides(
@@ -98,6 +105,8 @@ def test_profile_lifetime_limits_are_validated(values: dict[str, object]) -> Non
         {"recursion_limit": -1},
         {"subscriber_queue_size": 0},
         {"max_record_bytes": 0},
+        {"pi_max_record_bytes": 0},
+        {"pi_max_record_bytes": -1},
         {"max_output_bytes": 0},
         {"completed_event_retention": -1},
         {"shutdown_grace_seconds": 0},

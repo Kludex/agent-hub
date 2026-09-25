@@ -65,7 +65,16 @@ class PydanticAIRuntime:
     async def close(self) -> None:
         pass
 
+    def validate(self, request: StartAgentRequest) -> None:
+        self._create_agent(request)
+
     async def start(self, request: StartAgentRequest) -> object:
+        agent = self._create_agent(request)
+        usage_limits = UsageLimits(**request.profile.usage_limits.model_dump())
+        event_send, event_receive = anyio.create_memory_object_stream[RuntimeEvent](256)
+        return PydanticAIHandle(agent, event_send, event_receive, usage_limits=usage_limits)
+
+    def _create_agent(self, request: StartAgentRequest) -> Agent[Any, Any]:
         try:
             agent_spec = (
                 AgentSpec.from_file(request.profile.agent_spec) if request.profile.agent_spec is not None else None
@@ -112,11 +121,9 @@ class PydanticAIRuntime:
                     tools=tools,
                     toolsets=toolsets,
                 )
-        except UserError as exc:
-            raise RuntimeFailure(str(exc)) from exc
-        usage_limits = UsageLimits(**request.profile.usage_limits.model_dump())
-        event_send, event_receive = anyio.create_memory_object_stream[RuntimeEvent](256)
-        return PydanticAIHandle(agent, event_send, event_receive, usage_limits=usage_limits)
+        except (ImportError, UserError) as exc:
+            raise RuntimeFailure(f"Pydantic AI profile {request.profile.name!r}: {exc}") from exc
+        return agent
 
     async def prompt(self, handle: object, request: StartRunRequest) -> RuntimeResult:
         runtime = self._handle(handle)

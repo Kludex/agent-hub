@@ -10,7 +10,9 @@ import anyio
 import httpx2
 import pytest
 
-from agent_hub.cli import bind_socket
+from agent_hub.cli import bind_socket, check
+from agent_hub.config import AgentProfile
+from tests.conftest import RunningHub
 
 
 def test_socket_binding_removes_stale_paths_and_rejects_live_daemons() -> None:
@@ -33,6 +35,17 @@ def test_socket_binding_closes_the_listener_after_an_os_error(tmp_path: Path) ->
 
     with pytest.raises(OSError):
         bind_socket(path)
+
+
+@pytest.mark.anyio
+async def test_check_reports_profile_readiness(hub: RunningHub, capsys: pytest.CaptureFixture[str]) -> None:
+    assert await check(hub.config) == 0
+    assert "task: ok" in capsys.readouterr().out
+    hub.config.profiles["unavailable"] = AgentProfile(name="unavailable", runtime="pydantic-ai", model="test")
+
+    assert await check(hub.config) == 1
+    assert "unavailable: Agent runtime not available: pydantic-ai" in capsys.readouterr().out
+    assert await hub.rpc("hub.snapshot") == {"agents": [], "activeRuns": [], "latestSequence": 0}
 
 
 @pytest.mark.anyio
